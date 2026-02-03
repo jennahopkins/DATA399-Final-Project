@@ -3,6 +3,7 @@ Authors: Jenna Hopkins, Jerrick Little, Anujan Tennathur
 
 ## Environmental Problem & Framing
 northern california + southern oregon?
+In recent years, wildfires in California have became increasingly present in the news. These wildfires affect the ecology of the direct environment, people and communities who are located in the area, and the smoke and air pollution can reach communities hundreds of miles away. Prevention measures for these wildfires exist, but are not as effective as they could be and leave room for improvement. This project aims to solve the issue of inefficient prevention strategies by analyzing environmental data to provide two necessary and sufficient solutions to reduce the damage of wildfires in Southern California. Stakeholders.....
 
 ## Dataset Exploration
 ### Dataset 1: CAL FIRE Fuel Reduction Projects (https://calfire-forestry.maps.arcgis.com/home/item.html?id=80d439247b99489a938b09a0d182173c)
