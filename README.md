@@ -16,11 +16,11 @@ This dataset was compiled by CAL FIRE, a governmental organization that is respo
 
 ### Dataset 2: Interagency Remote Automatic Weather Stations (RAWS) (https://data-nifc.opendata.arcgis.com/datasets/nifc::public-view-interagency-remote-automatic-weather-stations-raws/about)
 This dataset collects data from Remote Automatic Weather Stations (RAWS), self-contained, portable, and permanent, solar powered weather stations that provide timely local weather data used primarily in fire management. The data from this will strengthen our proposed ideas by comparing times and key variables down below
-* Variable 1: Wind Speed
-* Variable 2: Relatively Humidity
-* Variable 3: Fuel Temperature
-* Variable 4: Air temperature
-* Variable 5: Rain accumulation
+* Variable 1: Wind Speed (continuous)
+* Variable 2: Relatively Humidity (continuous)
+* Variable 3: Fuel Temperature (continuous)
+* Variable 4: Air temperature (continuous)
+* Variable 5: Rain accumulation (continuous)
 
 
 ### Dataset 3:
