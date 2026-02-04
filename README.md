@@ -18,11 +18,11 @@ Spatial data on fuel reduction projects were obtained from the California Depart
 
 ### Dataset 2: Interagency Remote Automatic Weather Stations (RAWS) (https://data-nifc.opendata.arcgis.com/datasets/nifc::public-view-interagency-remote-automatic-weather-stations-raws/about)
 This dataset collects data from Remote Automatic Weather Stations (RAWS), self-contained, portable, and permanent, solar powered weather stations that provide timely local weather data used primarily in fire management. The data from this will strengthen our proposed ideas by comparing times and key variables down below:
-* Variable 1: Wind Speed (continuous)
-* Variable 2: Relatively Humidity (continuous)
-* Variable 3: Fuel Temperature (continuous)
-* Variable 4: Air temperature (continuous)
-* Variable 5: Rain accumulation (continuous)
+* Variable 1: Wind Speed MPH: Measurement of wind in MPH (continuous)
+* Variable 2: Relativel Humidity: Measurement of humidity in percentage format (continuous)
+* Variable 3: Fuel Temperature: Physical measurement in F of how hot the fuel is (continuous)
+* Variable 4: Air temperaturee, Standard Placement: Measurement of air temperature  (continuous)
+* Variable 5: Rain accumulation: Measurement of inches of precipitation (continuous)
 
 
 ### Dataset 3: California Weather and Fire Prediction Dataset (1984–2025) (https://zenodo.org/records/14712845)
