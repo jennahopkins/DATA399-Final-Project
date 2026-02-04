@@ -6,16 +6,18 @@ Wildfires in Northern California have increasingly burned at high severity due t
 
 ## Dataset Exploration
 ### Dataset 1: CAL FIRE Fuel Reduction Projects (https://calfire-forestry.maps.arcgis.com/home/item.html?id=80d439247b99489a938b09a0d182173c)
-This dataset was compiled by CAL FIRE, a governmental organization that is responsible for much of the current policy surrounding California wildfire. We can use this dataset to compare the solutions we will provide with data from the current policies to quantify how ours will improve upon it. Some key variables are described below:
-* variable 1:
-* variable 2:
-* variable 3:
-* variable 4:
-* variable 5:
-* variable 6:
+Spatial data on fuel reduction projects were obtained from the California Department of Forestry and Fire Protection (CAL FIRE) Open Data Portal and include polygon representations of completed fuel treatment areas across California with associated attribute information. This dataset is used to identify where and when fuel reduction treatments have been implemented and to evaluate their relationship with subsequent wildfire burn severity in Northern California. Some key variables are described below:
+* Variable 1: PROJECT_ID: ID number for each fuel reduction project (discrete)
+* Variable 2: PROJECT_TYPE: Type of fuel reduction activity (nominal)
+* Variable 3: PROJECT_STATUS: Overall project status (ordinal)
+* Variable 4: PROJECT_START_DATE: Datetime project activities started (continuous)
+* Variable 5: PROJECT_END_DATE: Datetime project activities ended (continuous)
+* Variable 6: NUM_TREATMENTS: Number of treatment activities within a project (discrete)
+* Variable 7: Shape_Area: Area of the treatment polygon (continuous)
+* Variable 8: geometry: Geometry of the project representing its spatial footprint (continuous)
 
 ### Dataset 2: Interagency Remote Automatic Weather Stations (RAWS) (https://data-nifc.opendata.arcgis.com/datasets/nifc::public-view-interagency-remote-automatic-weather-stations-raws/about)
-This dataset collects data from Remote Automatic Weather Stations (RAWS), self-contained, portable, and permanent, solar powered weather stations that provide timely local weather data used primarily in fire management. The data from this will strengthen our proposed ideas by comparing times and key variables down below
+This dataset collects data from Remote Automatic Weather Stations (RAWS), self-contained, portable, and permanent, solar powered weather stations that provide timely local weather data used primarily in fire management. The data from this will strengthen our proposed ideas by comparing times and key variables down below:
 * Variable 1: Wind Speed (continuous)
 * Variable 2: Relatively Humidity (continuous)
 * Variable 3: Fuel Temperature (continuous)
