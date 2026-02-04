@@ -23,4 +23,10 @@ This dataset collects data from Remote Automatic Weather Stations (RAWS), self-c
 * Variable 5: Rain accumulation (continuous)
 
 
-### Dataset 3:
+### Dataset 3: California Weather and Fire Prediction Dataset (1984–2025) (https://zenodo.org/records/14712845)
+This dataset holds comprehensive data on California wildfires starting from the 1980s till 2025. What makes this dataset special is some of it's unique characteristics. It incorporates meterological data from the NOAA Climate Data online with the fire incident data published by CAL FIRE. Importantly, this dataset holds several engineered features, which is helpful when trying to create predictive models, as we have organized and specific features to base the models off of.
+* Variable 1: TEMP_RANGE: The difference between maximum and minimum temperatures, indicating daily temperature variability.
+* Variable 2: LAGGED_AVG_WIND_SPEED: Average wind speed over the preceding 7 days, indicating sustained wind patterns.
+* Variable 3: SEASON: The season of the observation (Winter, Spring, Summer, Fall).
+* Variable 4: PRECIPITATION: Daily precipitation in inches.
+* Variable 5: YEAR: The year of the observation.
