@@ -8,25 +8,28 @@ import matplotlib.pyplot as plt
 from shapely.geometry import Point, box
 from datetime import datetime, timedelta
 from shapely.ops import nearest_points
+import requests
+import zipfile
+import os
 
 
 fires_mtbs = {
-    "Antelope_2021": "mtbs/Antelope_2021/ca4150012192920210801_20210718_20220721_rdnbr.tif",
-    "Bald_2014": "mtbs/Bald_2014/ca4090112136820140731_20140724_20140825_rdnbr.tif",
-    "Camp_2018": "mtbs/Camp_2018/ca3982012144020181108_20180719_20190722_rdnbr.tif", 
-    "Carr_2018": "mtbs/Carr_2018/ca4065012263020180723_20180710_20190729_rdnbr.tif",
-    "Dixie_2021": "mtbs/Dixie_2021/ca3987612137920210714_20200708_20220714_rdnbr.tif",
-    "Hat_2018": "mtbs/Hat_2018/ca4099012153020180809_20180804_20180820_rdnbr.tif",
-    "King_2014": "mtbs/King_2014/ca3878212060420140913_20130730_20150805_rdnbr.tif",
-    "McKinney_2022": "mtbs/McKinney_2022/ca4183012289520220729_20210830_20230815_rdnbr.tif",
-    "Monument_2021": "mtbs/Monument_2021/ca4075212333720210731_20210718_20220721_rdnbr.tif",
-    "NorthComplex_2020": "mtbs/NorthComplex_2020/ca4009112093120200817_20200809_20210711_rdnbr.tif"
+    "Antelope_2021": "Datasets/mtbs/Antelope_2021/ca4150012192920210801_20210718_20220721_rdnbr.tif",
+    "Bald_2014": "Datasets/mtbs/Bald_2014/ca4090112136820140731_20140724_20140825_rdnbr.tif",
+    "Camp_2018": "Datasets/mtbs/Camp_2018/ca3982012144020181108_20180719_20190722_rdnbr.tif", 
+    "Carr_2018": "Datasets/mtbs/Carr_2018/ca4065012263020180723_20180710_20190729_rdnbr.tif",
+    "Dixie_2021": "Datasets/mtbs/Dixie_2021/ca3987612137920210714_20200708_20220714_rdnbr.tif",
+    "Hat_2018": "Datasets/mtbs/Hat_2018/ca4099012153020180809_20180804_20180820_rdnbr.tif",
+    "King_2014": "Datasets/mtbs/King_2014/ca3878212060420140913_20130730_20150805_rdnbr.tif",
+    "McKinney_2022": "Datasets/mtbs/McKinney_2022/ca4183012289520220729_20210830_20230815_rdnbr.tif",
+    "Monument_2021": "Datasets/mtbs/Monument_2021/ca4075212333720210731_20210718_20220721_rdnbr.tif",
+    "NorthComplex_2020": "Datasets/mtbs/NorthComplex_2020/ca4009112093120200817_20200809_20210711_rdnbr.tif"
 }
 raster_path = fires_mtbs["Antelope_2021"]
 with rasterio.open(raster_path) as src:
     raster_crs = src.crs
 
-gdb_path = "CALFIRE_FuelReductionProjects.gdb"
+gdb_path = "Datasets/CALFIRE_FuelReductionProjects.gdb"
 calfire_gdf = gpd.read_file(gdb_path, layer = "CMDash_ProjectTreatments")
 calfire_gdf = calfire_gdf.to_crs(raster_crs)
 
@@ -117,28 +120,76 @@ def extract_raster_values(points_gdf, raster_path, col_name):
     points_gdf[col_name] = values
     return points_gdf
 
+def get_fire_month_from_filename(raster_path):
+    fname = os.path.basename(raster_path)
+    
+    # split by "_"
+    parts = fname.split("_")
+    
+    # ignition date is second element (YYYYMMDD)
+    ignition = parts[1]
+    
+    return ignition[:6]  # return YYYYMM
+
+
+
+def download_prism_month(variable, yyyymm, save_folder="Datasets/prism_data"):
+    
+    os.makedirs(save_folder, exist_ok=True)
+    
+    zip_path = f"{save_folder}/{variable}_{yyyymm}.zip"
+    
+    if not os.path.exists(zip_path):
+        url = f"https://services.nacse.org/prism/data/get/us/4km/{variable}/{yyyymm}"
+        r = requests.get(url)
+        
+        with open(zip_path, "wb") as f:
+            f.write(r.content)
+        
+        with zipfile.ZipFile(zip_path, "r") as z:
+            z.extractall(save_folder)
+    
+    # Find extracted tif
+    for file in os.listdir(save_folder):
+        if variable in file and yyyymm in file and file.endswith(".tif"):
+            return os.path.join(save_folder, file)
+
 
 
 all_samples = []
 
 for fire_name, raster_path in fires_mtbs.items():
-    gdf_fire = sample_and_plot_fire(fire_name, raster_path, calfire_gdf, plot = True)
+    gdf_fire = sample_and_plot_fire(fire_name, raster_path, calfire_gdf, plot = False)
+
+    fire_month = get_fire_month_from_filename(raster_path)
+    
+    # Download PRISM for this fire month
+    ppt_path = download_prism_month("ppt", fire_month)
+    tmax_path = download_prism_month("tmax", fire_month)
+    vpd_path = download_prism_month("vpdmax", fire_month)
+    
+    # Extract values
+    gdf_fire = extract_raster_values(gdf_fire, ppt_path, "ppt")
+    gdf_fire = extract_raster_values(gdf_fire, tmax_path, "tmax")
+    gdf_fire = extract_raster_values(gdf_fire, vpd_path, "vpdmax") # maximum vapor pressure deficit, atmospheric dryness indicator
+
     all_samples.append(gdf_fire)
 
 severity_df = pd.concat(all_samples, ignore_index=True)
 
-severity_df = extract_raster_values(severity_df, "landfire/LF2020_FBFM40_200_CONUS/Tif/LC20_F40_200.tif", "fuel_model")
-severity_df = extract_raster_values(severity_df, "landfire/LF2016_EVT_200_CONUS/Tif/LC16_EVT_200.tif", "vegetation_type")
-severity_df = extract_raster_values(severity_df, "landfire/LF2020_CC_200_CONUS/Tif/LC20_CC_200.tif", "canopy_cover")
-severity_df = extract_raster_values(severity_df, "landfire/LF2020_SlpD_CONUS/Tif/LF2020_SlpD_CONUS.tif", "slope_deg")
-severity_df = extract_raster_values(severity_df, "landfire/LF2020_Asp_CONUS/Tif/LF2020_Asp_CONUS.tif", "aspect_deg")
-severity_df = extract_raster_values(severity_df, "landfire/LF2020_Elev_CONUS/Tif/LF2020_Elev_CONUS.tif", "elevation_m")
+severity_df = extract_raster_values(severity_df, "Datasets/landfire/LF2020_FBFM40_200_CONUS/Tif/LC20_F40_200.tif", "fuel_model")
+severity_df = extract_raster_values(severity_df, "Datasets/landfire/LF2016_EVT_200_CONUS/Tif/LC16_EVT_200.tif", "vegetation_type")
+severity_df = extract_raster_values(severity_df, "Datasets/landfire/LF2020_CC_200_CONUS/Tif/LC20_CC_200.tif", "canopy_cover")
+severity_df = extract_raster_values(severity_df, "Datasets/landfire/LF2020_SlpD_CONUS/Tif/LF2020_SlpD_CONUS.tif", "slope_deg")
+severity_df = extract_raster_values(severity_df, "Datasets/landfire/LF2020_Asp_CONUS/Tif/LF2020_Asp_CONUS.tif", "aspect_deg")
+severity_df = extract_raster_values(severity_df, "Datasets/landfire/LF2020_Elev_CONUS/Tif/LF2020_Elev_CONUS.tif", "elevation_m")
 
 
 print(severity_df.head())
-print(severity_df[['severity', 'treated', 'fuel_model', 'vegetation_type', 'canopy_cover', 'slope_deg', 'aspect_deg', 'elevation_m']].describe())
+print(severity_df[["ppt", "tmax", "vpdmax"]].describe())
+print(severity_df[['ppt','tmax','vpdmax']].isna().sum())
+print(severity_df[['severity','ppt','tmax','vpdmax']].corr())
 
-url = "https://www.ncei.noaa.gov/access/services/data/v1"
 
 """
 
