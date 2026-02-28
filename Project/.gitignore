@@ -1,0 +1,8 @@
+# Large datasets
+Datasets/
+*.tif
+*.tif.*
+*.bil
+*.asc
+*.nc
+*.zip
