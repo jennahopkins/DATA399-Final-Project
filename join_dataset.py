@@ -185,10 +185,9 @@ severity_df = extract_raster_values(severity_df, "Datasets/landfire/LF2020_Asp_C
 severity_df = extract_raster_values(severity_df, "Datasets/landfire/LF2020_Elev_CONUS/Tif/LF2020_Elev_CONUS.tif", "elevation_m")
 
 
-print(severity_df.head())
-print(severity_df[["ppt", "tmax", "vpdmax"]].describe())
-print(severity_df[['ppt','tmax','vpdmax']].isna().sum())
-print(severity_df[['severity','ppt','tmax','vpdmax']].corr())
+final_df = severity_df.drop(columns="geometry")
+
+final_df.to_csv("combined_dataset.csv", index=False)
 
 
 """
