@@ -41,7 +41,7 @@ landfire_data = {
 }
 
 
-def create_grid_from_raster(raster_path, cell_size=1500):
+def create_grid_from_raster(raster_path, cell_size=3000):
 
     with rasterio.open(raster_path) as src:
         bounds = src.bounds
@@ -80,14 +80,35 @@ def sample_raster_at_centroids(grid, raster_path, colname):
     return grid
 
 
-def treatment_fraction(grid, calfire_gdf):
+def add_treatment_variable(grid, calfire_gdf, raster_path):
 
-    join = gpd.sjoin(grid, calfire_gdf[['geometry']], how="left", predicate="intersects")
+    import rasterio
+    from shapely.geometry import box
 
-    treated_idx = join.index.unique()
+    with rasterio.open(raster_path) as src:
+        bounds = src.bounds
+        raster_bbox = gpd.GeoDataFrame(
+            geometry=[box(bounds.left, bounds.bottom, bounds.right, bounds.top)],
+            crs=src.crs
+        )
 
-    grid["treated"] = 0
-    grid.loc[treated_idx, "treated"] = 1
+    # reproject CAL FIRE to raster CRS
+    calfire_gdf = calfire_gdf.to_crs(raster_bbox.crs)
+
+    # clip to raster bounds
+    calfire_clip = gpd.clip(calfire_gdf, raster_bbox)
+
+    # reproject grid to same CRS
+    grid = grid.to_crs(calfire_clip.crs)
+
+    # spatial join
+    join = gpd.sjoin(grid, calfire_clip[['PROJECT_ID','geometry']],
+                     how='left', predicate='intersects')
+
+    # collapse duplicates
+    treated = join.groupby(join.index)["PROJECT_ID"].apply(lambda x: x.notnull().any())
+
+    grid["treated"] = treated.astype(int)
 
     return grid
 
@@ -160,21 +181,56 @@ for fire_name, raster_path in fires_mtbs.items():
     for var, path in landfire_data.items():
         grid = sample_raster_at_centroids(grid, path, var)
 
-    fire_bbox = grid.union_all().envelope
-    calfire_clip = calfire_gdf.clip(fire_bbox)
-    calfire_clip = calfire_clip.to_crs(grid.crs)
-    grid = treatment_fraction(grid, calfire_clip)
+    grid = add_treatment_variable(grid, calfire_gdf, raster_path)
 
     grid["fire"] = fire_name
 
-    grid_proj = grid.to_crs(raster_crs)
-    grid["x"] = grid_proj.geometry.centroid.x
-    grid["y"] = grid_proj.geometry.centroid.y
+    # compute centroids in projected CRS
+    centroids = grid.geometry.centroid
+
+    centroids_gdf = gpd.GeoDataFrame(geometry=centroids, crs=grid.crs)
+
+    # convert centroids to lat/lon
+    centroids_latlon = centroids_gdf.to_crs("EPSG:4326")
+
+    # extract coordinates
+    grid["x"] = centroids_latlon.geometry.x
+    grid["y"] = centroids_latlon.geometry.y
 
     all_cells.append(grid)
 
 final_geometry_df = pd.concat(all_cells, ignore_index=True)
 
 final_df = final_geometry_df.drop(columns="geometry")
+
+final_df["fuel_model_group"] = "Other"
+
+final_df.loc[final_df["fuel_model"].isin([91,92,93,98,99]), "fuel_model_group"] = "Non-Burnable"
+final_df.loc[final_df["fuel_model"].between(101,109), "fuel_model_group"] = "Grass"
+final_df.loc[final_df["fuel_model"].between(121,124), "fuel_model_group"] = "Grass-Shrub"
+final_df.loc[final_df["fuel_model"].between(141,149), "fuel_model_group"] = "Shrub"
+final_df.loc[final_df["fuel_model"].between(161,165), "fuel_model_group"] = "Timber-Understory"
+final_df.loc[final_df["fuel_model"].between(181,189), "fuel_model_group"] = "Timber Litter"
+final_df.loc[final_df["fuel_model"].between(201,204), "fuel_model_group"] = "Slash-Blowdown"
+
+evt_lookup = pd.read_csv("LF2024_EVT.csv")
+lf_map = dict(zip(evt_lookup["VALUE"], evt_lookup["EVT_LF"]))
+final_df["vegetation_type_group"] = final_df["vegetation_type"].map(lf_map)
+
 final_df.to_csv("combined_dataset.csv", index=False)
 
+"""
+from esda.moran import Moran
+from libpysal.weights import KNN
+
+coords = list(zip(grid["x"], grid["y"]))
+
+w = KNN.from_array(coords, k=8)
+w.transform = "r"
+
+mi = Moran(grid["severity"], w)
+
+print(mi.I)
+print(mi.p_sim)
+print(final_df.shape)
+"""
