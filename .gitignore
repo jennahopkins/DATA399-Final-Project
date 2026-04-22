@@ -1,5 +1,5 @@
 # Large datasets
-Datasets/
+SourceDatasets/
 *.tif
 *.tif.*
 *.bil
