@@ -1,12 +1,7 @@
 
 
-library(readr)
-#' Reading in Dataset
-
-setwd("C:/Users/jerri/OneDrive/Documents/DATA399/DATA399-Final-Project/Final Project")
-ds_fire_og = read_csv("combined_dataset.csv")
-
 # Libraries
+library(readr)
 library(cluster)
 library(tidyverse)
 library(FactoMineR)
@@ -27,8 +22,80 @@ library(nortest)
 library(FSA)
 library(vegan)
 library(scatterplot3d)
+library(ggplot2)
+library(sf)
+library(dplyr)
+library(viridis)
+library(maps)
+library(ggrepel)
+# SET WD to device path
+setwd("C:/Users/jerri/OneDrive/Documents/DATA399/DATA399-Final-Project/Final Project")
+ds_fire_og = read_csv("combined_dataset.csv")
+# VISUAL OF SEVERITY
+
+fire = ds_fire_og %>%
+  group_by(fire) %>%
+  filter(
+    severity > quantile(severity, 0.01, na.rm=TRUE),
+    severity < quantile(severity, 0.99, na.rm=TRUE)
+  ) %>%
+  ungroup()
+
+fire = fire %>%
+  mutate(
+    severity_class = case_when(
+      severity < -100 ~ "Increased_Vegetation",
+      severity >= -100 & severity <= 100 ~ "Low_Severity",
+      severity > 100 & severity <= 270 ~ "Moderate_Severity",
+      TRUE ~ "High Severity"
+    ),
+    severity_class = factor(severity_class)
+  )
 
 
+ca <- map_data("state") %>% filter(region == "california")
+# Create one label point per fire at the centroid of its points
+fire_labels <- fire %>%
+  group_by(fire) %>%
+  summarise(
+    x = mean(x, na.rm = TRUE),
+    y = mean(y, na.rm = TRUE)
+  ) %>%
+  mutate(fire_label = gsub("_", " ", fire))
+
+ggplot() +
+  geom_polygon(data = ca, aes(x = long, y = lat, group = group),
+               fill = "grey90", color = "grey50") +
+  geom_point(data = fire, aes(x = x, y = y, color = severity_class),
+             size = 0.8, alpha = 0.7) +
+  geom_label_repel(data = fire_labels, aes(x = x, y = y, label = fire_label),
+                   size = 3,
+                   fontface = "bold",
+                   fill = "white",
+                   color = "black",
+                   label.padding = unit(0.15, "lines"),
+                   box.padding = unit(0.4, "lines"),
+                   max.overlaps = 20) +
+  scale_color_manual(values = c(
+    "Increased_Vegetation" = "#1a9641",
+    "Low_Severity"         = "#a1dab4",
+    "Moderate_Severity"    = "#fd8d3c",
+    "High Severity"        = "#bd0026"
+  ), labels = c("Increased_Vegetation" = "Increased Vegetation",
+                "Low_Severity" = "Low Severity",
+                "Moderate_Severity" = "Moderate Severity",
+                "High Severity" = "High Severity")) +
+  coord_fixed(1.3, xlim = c(-125, -119), ylim = c(38, 42)) +
+  theme_minimal() +
+  labs(title = "Burn Severity Across 10 Northern California Fires",
+       color = "Severity Class", x = "Longitude", y = "Latitude") +
+  theme(legend.position = "top", legend.key.size = unit(5, "mm"))+
+  guides(
+    color = guide_legend(
+      override.aes = list(size = 5),
+      title.theme = element_text(face = "bold", size = 11),
+      label.theme = element_text(size = 10)
+    ))
 # Base Visualizations, EDA
 
 # Histograms
@@ -492,530 +559,10 @@ p1 <- make_nmds_panel("NMDS1", "NMDS2")
 p2 <- make_nmds_panel("NMDS1", "NMDS3")
 p3 <- make_nmds_panel("NMDS2", "NMDS3")
 
-# View them one at a time in RStudio
+# View each plot separately
 p1
 p2
 p3
-#' Possible Unsupervised Models
-#' -- Use the unsupervised machine learning models to explain variance, not to 
-#' explain causal relationships.
-#' 
-#' 
-
-#' K-Means Clustering, FAMD, PCA --> See if there is linear relationship between variables
-#' when trying to explain the variance in severity, faceted by each fire. Then, 
-#' we will compare them. 
-#' 
-#' Non-Linear Clustering Options: UMAPS, Gower's Distances --> Use these if it is 
-#' found that linear relationships do not accurately represent the data and the 
-#' relationship between the variables. 
-#' 
-
-# Unsupervised, Linear Model Pipeline
-
-ds_fire = ds_fire_og %>%
-  select(-x, -y) %>%
-  mutate(
-    fire = factor(fire),
-    treated = factor(treated),
-    fuel_model = factor(fuel_model),
-    vegetation_type = factor(vegetation_type),
-    fuel_model_group = factor(fuel_model_group),
-    vegetation_type_group = factor(vegetation_type_group)
-  )
-
-ds_fire = ds_fire %>%
-  group_by(fire) %>%
-  filter(
-    severity > quantile(severity, 0.01, na.rm=TRUE),
-    severity < quantile(severity, 0.99, na.rm=TRUE)
-  ) %>%
-  ungroup()
-
-
-ds_fire = ds_fire %>%
-  mutate(
-    severity_class = case_when(
-      severity <= -100 ~ "Increased_Vegetation",
-      severity >= -100 & severity <= 100 ~ "Low_Severity",
-      severity >= 100 & severity <= 270 ~ "Moderate_Severity",
-      TRUE ~ "High Severity"
-    ),
-    severity_class = factor(severity_class)
-  )
-
-ds_fire = ds_fire %>%
-  mutate(across(where(is.numeric), ~ifelse(is.infinite(.), NA, .)))
-
-num_vars = ds_fire %>%
-  select(severity, ppt, tmax, vpdmax, canopy_cover, slope_deg, aspect_deg, elevation_m)
-
-cor_matrix = cor(num_vars, use="pairwise.complete.obs")
-
-corrplot::corrplot(cor_matrix, method="color")
-GGally::ggpairs(num_vars)
-
-severity_cor = cor_matrix["severity", ]
-severity_cor
-
-fire_list = ds_fire %>%
-  group_split(fire)
-
-
-
-# FAMD + K-Means
-
-# Single Fire Example
-
-
-ds_fire <- ds_fire %>%
-  filter(!is.na(severity))
-
-run_famd <- function(data) {
-  famd_data <- data %>%
-    select(ppt, 
-           tmax, 
-           vpdmax,
-           canopy_cover, 
-           elevation_m,
-           fuel_model_group, 
-           vegetation_type_group) %>%
-    drop_na()
-  
-  if (nrow(famd_data) < 20) return(NULL)
-  
-  famd_res <- FactoMineR::FAMD(famd_data, graph = FALSE)
-  
-  coords <- as.data.frame(famd_res$ind$coord)
-  km <- kmeans(coords, centers = 3, nstart = 25)
-  coords$cluster <- factor(km$cluster)
-  coords$fire <- unique(data$fire)
-  
-  # ← removed duplicate coords reassignment, just add severity directly
-  coords$severity <- data %>% 
-    select(severity, ppt, tmax, vpdmax,
-           canopy_cover, slope_deg, aspect_deg, elevation_m,
-           fuel_model_group, vegetation_type_group, treated) %>%
-    drop_na() %>% 
-    pull(severity)
-  
-  var_contrib <- as.data.frame(famd_res$var$contrib)
-  var_contrib$variable <- rownames(var_contrib)
-  var_contrib$fire <- unique(data$fire)
-  
-  list(coords = coords, loadings = var_contrib)
-}
-
-results <- map(fire_list, run_famd)
-
-famd_results  <- map_dfr(results, "coords")
-famd_loadings <- map_dfr(results, "loadings")
-
-# Cluster Plot
-
-ggplot(famd_results, aes(Dim.1, Dim.2, color=cluster)) +
-  geom_point(alpha=.6) +
-  facet_wrap(~fire) +
-  theme_minimal()
-
-# Dimension Variable Weights
-
-famd_loadings %>%
-  group_by(variable) %>%
-  summarise(Dim.1 = mean(Dim.1), Dim.2 = mean(Dim.2)) %>%
-  pivot_longer(cols = c(Dim.1, Dim.2), 
-               names_to = "dimension", values_to = "contribution") %>%
-  ggplot(aes(x = reorder(variable, contribution), 
-             y = contribution, fill = dimension)) +
-  geom_col(position = "dodge") +
-  coord_flip() +
-  theme_minimal() +
-  labs(x = "Variable", y = "% Contribution", 
-       title = "Average Variable Contributions to FAMD Dimensions")
-
-## Interpretation Models
-
-famd_results %>%
-  group_by(fire) %>%
-  group_map(~ summary(lm(severity ~ Dim.1 + Dim.2 + Dim.3, data = .x)))
-
-# Get the name of the Fire
-
-famd_results %>%
-  distinct(fire) %>%
-  arrange(fire) %>%
-  slice(6)
-
-fire_models <- famd_results %>%
-  group_by(fire) %>%
-  group_map(~ {
-    fire_name <- unique(.x$fire)
-    
-    lm_mod <- lm(severity ~ Dim.1 + Dim.2 + Dim.3, data = .x)
-    rf_mod <- randomForest(severity ~ Dim.1 + Dim.2 + Dim.3, data = .x, ntree = 500)
-    
-    tibble(
-      fire = fire_name,
-      lm_r2 = summary(lm_mod)$r.squared,
-      rf_r2 = rf_mod$rsq[500]  # R² at last tree
-    )
-  }) %>%
-  bind_rows()
-
-fire_models
-
-# ----- 
-
-# Mixed Effects Models
-
-library(lme4)
-
-# Random intercept model - fire shifts baseline severity
-model_ri <- lmer(severity ~ Dim.1 + Dim.2 + Dim.3 + (1 | fire), 
-                 data = famd_results)
-summary(model_ri)
-
-# Random intercept + random slopes - fire can also respond differently to each dim
-model_rs <- lmer(severity ~ Dim.1 + Dim.2 + Dim.3 + 
-                   (1 + Dim.1 + Dim.2 + Dim.3 | fire), 
-                 data = famd_results)
-summary(model_rs)
-
-# Compare the two models
-AIC(model_ri, model_rs)
-
-performance::icc(model_ri)
-
-model_mid <- lmer(severity ~ Dim.1 + Dim.2 + Dim.3 + 
-                    (1 + Dim.2 | fire), 
-                  data = famd_results)
-summary(model_mid)
-AIC(model_ri, model_mid, model_rs)
-
-
-
-
-
-#' Fire [[6]] (King, 2014) stands out — 50% of severity variance explained is 
-#' genuinely strong for fire behavior modeling, suggesting predictor 
-#' structure maps cleanly onto severity for that fire.
-#' Dim.2 is the most consistently significant predictor across fires 
-#' (significant in 6 of 9), suggesting whatever that dimension 
-#' captures is the most broadly relevant to severity. 
-#' 
-#' The broader implication is that the predictor-severity relationship is 
-#' highly fire-specific, which makes ecological sense — the same topographic 
-#' or weather conditions may drive severity very differently depending on 
-#' fuel state, ignition pattern, etc. This suggests 
-#' a mixed effects model with fire as a random effect might be worth 
-#' exploring as an alternative to fitting 9 separate models.
-
-
-# Mixed Effects Model -- Fire as Random Effect
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Non-Linear, Gower's Distance UMAPS HBDSCAN
-
-ds_fire <- ds_fire %>%
-  filter(!is.na(severity))
-
-run_fire_pipeline <- function(data){
-  
-  fire_name <- unique(data$fire)
-  
-  feature_cols <- c(
-    #"ppt",
-    "tmax",
-    #"vpdmax",
-    "canopy_cover",
-    #"slope_deg",
-    #"aspect_deg",
-    "elevation_m",
-    "fuel_model_group",
-    "vegetation_type_group"
-  )
-  
-  features <- data %>%
-    select(all_of(feature_cols)) %>%
-    drop_na()
-  
-  n <- nrow(features)
-  
-  n <- nrow(features)
-  
-  # Skip fires that are too small
-  if(n < 10){
-    return(NULL)
-  }
-  
-  # -------------------------
-  # GOWER DISTANCE
-  # -------------------------
-  
-  gower_dist <- cluster::daisy(features, metric = "gower")
-  
-  # -------------------------
-  # UMAP (dynamic neighbors)
-  # -------------------------
-  
-  neighbors <- min(10, n - 1)
-  
-  umap_config <- umap::umap.defaults
-  umap_config$n_neighbors <- neighbors
-  
-  umap_res <- umap::umap(as.matrix(gower_dist), config = umap_config)
-  
-  coords <- as.data.frame(umap_res$layout)
-  colnames(coords) <- c("UMAP1","UMAP2")
-  
-  # -------------------------
-  # HDBSCAN
-  # -------------------------
-  
-  minpts <- max(5, floor(n * 0.05))
-  
-  hdb <- dbscan::hdbscan(coords, minPts = minpts)
-  
-  coords$cluster <- factor(hdb$cluster)
-  coords$fire <- fire_name
-  
-  cluster_data <- data %>%
-    slice(1:n) %>%
-    mutate(cluster = coords$cluster)
-  
-  list(
-    coords = coords,
-    cluster_data = cluster_data
-  )
-}
-
-results <- purrr::map(fire_list, run_fire_pipeline)
-
-results <- results[!sapply(results, is.null)]
-
-umap_results <- purrr::map_dfr(results, "coords")
-cluster_data <- purrr::map_dfr(results, "cluster_data")
-
-
-
-ggplot(umap_results,
-       aes(UMAP1, UMAP2, color = cluster)) +
-  geom_point(alpha = .7) +
-  facet_wrap(~fire) +
-  theme_minimal() +
-  labs(title = "UMAP Clusters by Fire")
-
-ggplot(cluster_data,
-       aes(cluster, severity, fill = cluster)) +
-  geom_boxplot() +
-  facet_wrap(~fire) +
-  theme_minimal() +
-  labs(title = "Severity Distribution by Cluster")
-
-cluster_summary <- cluster_data %>%
-  group_by(fire, cluster) %>%
-  summarise(
-    across(
-      c(tmax, canopy_cover,
-        elevation_m),
-      median,
-      na.rm = TRUE
-    ),
-    .groups = "drop"
-  )
-
-cluster_summary
-
-cluster_long <- cluster_summary %>%
-  pivot_longer(
-    -c(fire, cluster),
-    names_to = "variable",
-    values_to = "value"
-  )
-
-ggplot(cluster_long,
-       aes(cluster, variable, fill = value)) +
-  geom_tile() +
-  facet_wrap(~fire, scales = "free") +
-  scale_fill_viridis_c() +
-  theme_minimal()
-
-ggplot(cluster_data,
-       aes(cluster, fill = fuel_model_group)) +
-  geom_bar(position = "fill") +
-  facet_wrap(~fire) +
-  theme_minimal() +
-  labs(
-    y = "Proportion",
-    title = "Fuel Model Composition by Cluster"
-  )
-
-
-aov(severity ~ cluster, data = cluster_data)
-chisq.test(table(cluster_data$fuel_model_group,
-                 cluster_data$cluster))
-
-# Treatment Effect on Severity
-#' Testing whether fuel treatment (treated vs untreated) has a statistically
-#' significant effect on severity within each fire.
-#' Wilcoxon rank-sum test is used here (non-parametric) since we already 
-#' established that severity is not normally distributed.
-
-treatment_results <- ds_fire_og %>%
-  group_by(fire) %>%
-  group_map(~ {
-    treated_vals   <- .x$severity[.x$treated == 1]
-    untreated_vals <- .x$severity[.x$treated == 0]
-    
-    # Need at least 3 observations in each group to run the test
-    if (length(treated_vals) < 3 | length(untreated_vals) < 3) return(NULL)
-    
-    test <- wilcox.test(treated_vals, untreated_vals)
-    
-    tibble(
-      fire       = unique(.x$fire),
-      median_treated   = median(treated_vals, na.rm = TRUE),
-      median_untreated = median(untreated_vals, na.rm = TRUE),
-      w_stat     = test$statistic,
-      p_value    = test$p.value,
-      significant = test$p.value < 0.05
-    )
-  }, .keep = TRUE) %>%
-  bind_rows()
-
-print(treatment_results)
-
-#' Adding treatment as a fixed effect in the mixed effects model.
-#' This lets us ask: after accounting for fire identity and the FAMD 
-#' dimensions, does treatment status still predict severity?
-
-model_treatment <- lmer(
-  severity ~ Dim.1 + Dim.2 + Dim.3 + treated + (1 | fire),
-  data = famd_results %>% 
-    left_join(ds_fire %>% select(fire, treated) %>% distinct(), by = "fire")
-)
-
-summary(model_treatment)
-
-#' Compare to the baseline random intercept model to see if adding
-#' treatment improves model fit.
-AIC(model_ri, model_treatment)
-
-
-#' The previous join failed because treated varies pixel-by-pixel, not 
-#' by fire. We need to carry treated through the FAMD pipeline instead
-#' of joining it back afterward.
-#' 
-#' The fix is to re-run run_famd() with treated retained in the output,
-#' since it was available in the original data at the pixel level.
-
-run_famd_v2 <- function(data) {
-  
-  feature_cols <- c("ppt", "tmax", "vpdmax", "canopy_cover", 
-                    "elevation_m", "fuel_model_group", "vegetation_type_group")
-  
-  famd_data <- data %>%
-    select(all_of(feature_cols), treated, severity) %>%
-    drop_na()
-  
-  if (nrow(famd_data) < 20) return(NULL)
-  
-  # FAMD runs on features only, not treated or severity
-  famd_res <- FactoMineR::FAMD(
-    famd_data %>% select(all_of(feature_cols)), 
-    graph = FALSE
-  )
-  
-  coords <- as.data.frame(famd_res$ind$coord)
-  km <- kmeans(coords, centers = 3, nstart = 25)
-  coords$cluster  <- factor(km$cluster)
-  coords$fire     <- unique(data$fire)
-  coords$severity <- famd_data$severity
-  coords$treated  <- famd_data$treated   # ← carried through cleanly
-  
-  var_contrib <- as.data.frame(famd_res$var$contrib)
-  var_contrib$variable <- rownames(var_contrib)
-  var_contrib$fire <- unique(data$fire)
-  
-  list(coords = coords, loadings = var_contrib)
-}
-
-results_v2    <- map(fire_list, run_famd_v2)
-famd_results  <- map_dfr(results_v2, "coords")
-famd_loadings <- map_dfr(results_v2, "loadings")
-
-# Now the mixed effects model will work correctly
-model_treatment <- lmer(
-  severity ~ Dim.1 + Dim.2 + Dim.3 + treated + (1 | fire),
-  data = famd_results
-)
-
-summary(model_treatment)
-AIC(model_ri, model_treatment)
-
-
-# PERMANOVA Cluster Validation
-#' The PERMANOVA (Permutational Multivariate ANOVA) tests whether the 
-#' HDBSCAN clusters correspond to genuinely different multivariate 
-#' environmental profiles using the Gower distance matrix.
-#' This is a stronger validation than just visual separation in UMAP space --
-#' it confirms the clusters differ across ALL input variables simultaneously.
-#' 
-#' Note: Noise points (cluster == 0) are excluded since HDBSCAN labels 
-#' them as unassigned rather than a meaningful group.
-
-permanova_results <- purrr::map_dfr(results, function(res) {
-  
-  fire_name <- unique(res$coords$fire)
-  
-  cd <- res$cluster_data %>%
-    filter(cluster != 0) %>%     # Remove HDBSCAN noise points
-    drop_na(tmax, canopy_cover, elevation_m, 
-            fuel_model_group, vegetation_type_group)
-  
-  if (n_distinct(cd$cluster) < 2 | nrow(cd) < 10) return(NULL)
-  
-  features <- cd %>%
-    select(tmax, canopy_cover, elevation_m,
-           fuel_model_group, vegetation_type_group)
-  
-  gd <- cluster::daisy(features, metric = "gower")
-  
-  perm <- vegan::adonis2(gd ~ cluster, data = cd, permutations = 999)
-  
-  tibble(
-    fire      = fire_name,
-    R2        = perm$R2[1],        # Proportion of variance explained by cluster
-    p_value   = perm$`Pr(>F)`[1],
-    significant = perm$`Pr(>F)`[1] < 0.05
-  )
-})
-
-print(permanova_results)
-
-#' R2 here tells you the proportion of multivariate environmental variance
-#' explained by cluster membership -- higher means the clusters correspond 
-#' to more distinct environmental conditions.
-#' The variation in R² across fires is itself a finding — fires with higher R² 
-#' have more environmentally stratified landscapes, while Dixie and Camp burned 
-#' across more homogeneous terrain, suggesting severity there was driven more by 
-#' fire behavior dynamics (wind, spread rate) than by the static environmental features 
-#' we measured.
 
 
 # NMDS envfit Variable Importance Summary
