@@ -10,14 +10,16 @@ output: pdf_document
 ```{r}
 #setwd("/Users/anujantennathur/Documents/GitHub/EnvDataSci_Sp26/Final Project")
 #setwd("C::/Users/jenna/Documents/DATA399/DATA399-Final-Project/Final Project")
+#setwd("C:/Users/jerri/OneDrive/Documents/DATA399/DATA399-Final-Project/Final Project")
 
 # Libraries
 
+library(readr)
+library(cluster)
 library(tidyverse)
 library(FactoMineR)
 library(factoextra)
 library(umap)
-library(cluster)
 library(GGally)
 library(plotly)
 library(dbscan)
@@ -33,6 +35,12 @@ library(nortest)
 library(FSA)
 library(vegan)
 library(scatterplot3d)
+library(ggplot2)
+library(sf)
+library(dplyr)
+library(viridis)
+library(maps)
+library(ggrepel)
 
 ds_fire_og = read_csv("combined_dataset.csv")
 ```
@@ -261,6 +269,78 @@ group_1_fires = c(Antelope_2021, Camp_2018, Hat_2018, King_2014, McKinney_2022)
 group_2_fires = c(Bald_2014, Carr_2018)
 group_3_fires = c(Dixie_2021, Monument_2021, NorthComplex_2020)
 ```
+# We can visualize the severity levels of each fire within california
+
+
+```{r}
+# VISUAL OF SEVERITY IN CALIFORNIA
+
+fire = ds_fire_og %>%
+  group_by(fire) %>%
+  filter(
+    severity > quantile(severity, 0.01, na.rm=TRUE),
+    severity < quantile(severity, 0.99, na.rm=TRUE)
+  ) %>%
+  ungroup()
+
+fire = fire %>%
+  mutate(
+    severity_class = case_when(
+      severity < -100 ~ "Increased_Vegetation",
+      severity >= -100 & severity <= 100 ~ "Low_Severity",
+      severity > 100 & severity <= 270 ~ "Moderate_Severity",
+      TRUE ~ "High Severity"
+    ),
+    severity_class = factor(severity_class)
+  )
+
+
+ca <- map_data("state") %>% filter(region == "california")
+# Create one label point per fire at the centroid of its points
+fire_labels <- fire %>%
+  group_by(fire) %>%
+  summarise(
+    x = mean(x, na.rm = TRUE),
+    y = mean(y, na.rm = TRUE)
+  ) %>%
+  mutate(fire_label = gsub("_", " ", fire))
+
+ggplot() +
+  geom_polygon(data = ca, aes(x = long, y = lat, group = group),
+               fill = "grey90", color = "grey50") +
+  geom_point(data = fire, aes(x = x, y = y, color = severity_class),
+             size = 0.8, alpha = 0.7) +
+  geom_label_repel(data = fire_labels, aes(x = x, y = y, label = fire_label),
+                   size = 3,
+                   fontface = "bold",
+                   fill = "white",
+                   color = "black",
+                   label.padding = unit(0.15, "lines"),
+                   box.padding = unit(0.4, "lines"),
+                   max.overlaps = 20) +
+  scale_color_manual(values = c(
+    "Increased_Vegetation" = "#1a9641",
+    "Low_Severity"         = "#a1dab4",
+    "Moderate_Severity"    = "#fd8d3c",
+    "High Severity"        = "#bd0026"
+  ), labels = c("Increased_Vegetation" = "Increased Vegetation",
+                "Low_Severity" = "Low Severity",
+                "Moderate_Severity" = "Moderate Severity",
+                "High Severity" = "High Severity")) +
+  coord_fixed(1.3, xlim = c(-125, -119), ylim = c(38, 42)) +
+  theme_minimal() +
+  labs(title = "Burn Severity Across 10 Northern California Fires",
+       color = "Severity Class", x = "Longitude", y = "Latitude") +
+  theme(legend.position = "top", legend.key.size = unit(5, "mm"))+
+  guides(
+    color = guide_legend(
+      override.aes = list(size = 5),
+      title.theme = element_text(face = "bold", size = 11),
+      label.theme = element_text(size = 10)
+    ))
+```
+
+
 # We are now able to proceed with the rest of the analysis. 
 
 #' NMDS - Non-Metric Multidimensional Scaling - Non-linear
@@ -297,25 +377,6 @@ fire = ds_fire_og %>%
     vegetation_type_group = factor(vegetation_type_group)
   )
 
-fire = fire %>%
-  group_by(fire) %>%
-  filter(
-    severity > quantile(severity, 0.01, na.rm=TRUE),
-    severity < quantile(severity, 0.99, na.rm=TRUE)
-  ) %>%
-  ungroup()
-
-
-fire = fire %>%
-  mutate(
-    severity_class = case_when(
-      severity <= -100 ~ "Increased_Vegetation",
-      severity >= -100 & severity <= 100 ~ "Low_Severity",
-      severity >= 100 & severity <= 270 ~ "Moderate_Severity",
-      TRUE ~ "High Severity"
-    ),
-    severity_class = factor(severity_class)
-  )
 
 fire = fire %>%
   mutate(
@@ -353,7 +414,7 @@ env_data = fire %>%
 
 dist_matrix = daisy(env_data, metric = "gower")
 
-nmds_result_3d = metaMDS(dist_matrix, k = 3, trymax = 25, autotransform = FALSE)
+nmds_result_3d = metaMDS(dist_matrix, k = 3, trymax = 10, autotransform = FALSE)
 
 nmds_matrix_3d = as.matrix(nmds_result_3d$points)
 
@@ -368,56 +429,234 @@ print(fit)
 #' Since we have both continuous and categorical factors in our
 #' fit variable, we need to extract them before we create 
 #' the NMDS Visualization.
-```{r}
-site_scores = as.data.frame(scores(nmds_result_3d, display = "sites"))
-site_scores$fire_group = fire$fire_group
-site_scores$severity_class = fire$severity_class
-vec_coords = as.data.frame(scores(fit, display = "vectors"))
-vec_coords$variable = rownames(vec_coords)
-fact_coords = as.data.frame(scores(fit, display = "factors"))
-fact_coords$variable = rownames(fact_coords)
-```
-# NMDS Visualization
-```{r}
-plot_3d <- plot_ly() %>%
-  add_trace(data = site_scores, 
-            x = ~NMDS1, y = ~NMDS2, z = ~NMDS3,
-            color = ~fire_group, 
-            symbol = ~severity_class,
-            type = "scatter3d", 
-            mode = "markers",
-            marker = list(size = 3, opacity = 0.7))
+#' Here is our full pipeline to create our pairwise panels
 
-plot_3d
-```
 ```{r}
-for (i in 1:nrow(vec_coords)) {
-  plot_3d = plot_3d %>%
-    add_trace(x = c(0, vec_coords$NMDS1[i]), 
-              y = c(0, vec_coords$NMDS2[i]), 
-              z = c(0, vec_coords$NMDS3[i]),
-              type = "scatter3d", mode = "lines",
-              line = list(color = "black", width = 4),
-              name = vec_coords$variable[i],
-              showlegend = TRUE)
+# NMDS Pairwise Panels -- Full Clean Pipeline
+# Step 1: Extract site scores from the 3D NMDS result
+site_scores <- as.data.frame(nmds_result_3d$points)
+colnames(site_scores) <- c("NMDS1", "NMDS2", "NMDS3")
+site_scores$fire_group     <- fire$fire_group
+site_scores$severity_class <- fire$severity_class
+
+# Step 2: Rerun envfit on the raw points matrix for vectors and factors
+fit_vec <- envfit(
+  nmds_result_3d$points,
+  fire %>% select(vpdmax, elevation_m),
+  perm = 999
+)
+
+fit_fac <- envfit(
+  nmds_result_3d$points,
+  fire %>% select(fuel_model_group, vegetation_type_group,
+                  severity_class, fire_group),
+  perm = 999
+)
+
+# Step 3: Build vec_coords and fact_coords safely
+vec_coords <- as.data.frame(fit_vec$vectors$arrows)
+colnames(vec_coords) <- c("NMDS1", "NMDS2")
+vec_coords$NMDS3    <- 0
+vec_coords$variable <- rownames(vec_coords)
+
+fact_coords <- as.data.frame(fit_fac$factors$centroids)
+colnames(fact_coords) <- c("NMDS1", "NMDS2")
+fact_coords$NMDS3    <- 0
+fact_coords$variable <- rownames(fact_coords)
+
+# Step 4: Clean up factor labels
+#' Keeping only fuel model centroids -- vegetation type adds too many 
+#' overlapping labels. Stripping the prefix so "Grass" shows instead 
+#' of "fuel_model_groupGrass"
+
+fact_coords_plot <- fact_coords %>%
+  filter(grepl("fuel_model_group", variable)) %>%
+  mutate(variable = gsub("fuel_model_group", "", variable))
+
+# Step 5: Shared styling
+group_colors <- c(
+  "Group 1" = "#B85042",
+  "Group 2" = "#4A7C59",
+  "Group 3" = "#4A6FA5"
+)
+
+severity_shapes <- c(
+  "High Severity"        = 17,
+  "Increased_Vegetation" = 15,
+  "Low_Severity"         = 16,
+  "Moderate_Severity"    = 18
+)
+
+nmds_theme <- theme_minimal(base_size = 13) +
+  theme(
+    plot.title         = element_text(face = "bold", size = 14, hjust = 0.5),
+    panel.grid.minor   = element_blank(),
+    panel.grid.major   = element_line(color = "gray92"),
+    panel.border       = element_rect(color = "gray80", fill = NA),
+    plot.background    = element_rect(fill = "white", color = NA),
+    axis.title         = element_text(size = 11),
+    legend.title       = element_text(face = "bold", size = 14),
+    legend.text        = element_text(size = 12),
+    plot.margin        = unit(c(10, 15, 10, 15), "pt"),
+    legend.key.size    = unit(1.2, "lines")  
+  )
+
+# Step 6: Panel builder function
+make_nmds_panel <- function(xvar, yvar) {
+  
+  pts <- site_scores %>% 
+    rename(x_axis = all_of(xvar), y_axis = all_of(yvar))
+  
+  vec <- vec_coords %>% 
+    rename(x_axis = all_of(xvar), y_axis = all_of(yvar))
+  
+  fct <- fact_coords_plot %>% 
+    rename(x_axis = all_of(xvar), y_axis = all_of(yvar))
+  
+  # Scale arrows relative to the data range so they're always visible
+  x_range <- diff(range(pts$x_axis, na.rm = TRUE))
+  y_range <- diff(range(pts$y_axis, na.rm = TRUE))
+  arrow_scale <- min(x_range, y_range) * 0.35
+  
+  vec <- vec %>%
+    mutate(x_end = x_axis * arrow_scale,
+           y_end = y_axis * arrow_scale)
+  
+  ggplot(pts, aes(x = x_axis, y = y_axis,
+                  color = fire_group,
+                  shape = severity_class)) +
+    geom_point(alpha = 0.5, size = 1.5) +
+    
+    # Environmental vector arrows
+    geom_segment(data = vec,
+                 aes(x = 0, y = 0, xend = x_end, yend = y_end),
+                 inherit.aes = FALSE,
+                 arrow = arrow(length = unit(0.2, "cm"), type = "closed"),
+                 color = "black", linewidth = 0.9) +
+    geom_label(data = vec,
+               aes(x = x_end * 1.25, y = y_end * 1.25, label = variable),
+               inherit.aes = FALSE,
+               size = 5, fontface = "bold", color = "black",
+               fill = "white", label.size = 0,
+               label.padding = unit(0.15, "lines")) +
+    
+    # Fuel model centroids with repelled labels
+    ggrepel::geom_text_repel(
+      data = fct,
+      aes(x = x_axis, y = y_axis, label = variable),
+      inherit.aes = FALSE,
+      color = "red", size = 5, fontface = "bold",
+      max.overlaps = 20,
+      box.padding = 0.4,
+      segment.color = "red", segment.size = 0.3, segment.alpha = 0.5
+    ) +
+    geom_point(data = fct,
+               aes(x = x_axis, y = y_axis),
+               inherit.aes = FALSE,
+               color = "red", size = 5, shape = 3, stroke = 1.2) +
+    
+    scale_color_manual(values = group_colors, name = "Fire Group") +
+    scale_shape_manual(values = severity_shapes, name = "Severity Class") +
+    labs(title = paste(xvar, "vs", yvar), x = xvar, y = yvar) +
+    nmds_theme
 }
 
-plot_3d
+# Step 7: Build and view each panel individually
+p1 <- make_nmds_panel("NMDS1", "NMDS2")
+p2 <- make_nmds_panel("NMDS1", "NMDS3")
+p3 <- make_nmds_panel("NMDS2", "NMDS3")
+
+# View each plot separately
+p1
+p2
+p3
 ```
+# Let's look at what significantly drives severity based off NMDS by extracting
+# R² and p-values from the envfit object to create a ranked 
+# summary of which environmental variables most strongly align with 
+# the ordination space -- and therefore with severity patterns across fires.
+
+# Two separate tables are built: one for continuous vectors (tmax, vpdmax, 
+# elevation) and one for categorical factors (fuel model, vegetation type,
+# severity class, fire group), since envfit handles them differently
+
 ```{r}
-# not working, i think row names got changed in previous plot_3d overwrite?
-#plot_3d = plot_3d %>%
-  #add_trace(data = fact_coords, x = ~NMDS1, y = ~NMDS2, 
-            ## z = ~NMDS3,
-            #type = "scatter3d", mode = "text",
-            #text = ~variable, textfont = list(color = "red", size = 12),
-            #name = "Factors/Vegetation")
+# Continuous variables
+vector_r2 <- as.data.frame(fit$vectors$r)
+colnames(vector_r2) <- "R2"
+vector_r2$p_value <- fit$vectors$pvals
+vector_r2$variable <- rownames(vector_r2)
+vector_r2$type <- "Continuous"
 
-#plot_3d
+# Categorical variables
+factor_r2 <- as.data.frame(fit$factors$r)
+colnames(factor_r2) <- "R2"
+factor_r2$p_value <- fit$factors$pvals
+factor_r2$variable <- rownames(factor_r2)
+factor_r2$type <- "Categorical"
+
+envfit_summary <- bind_rows(vector_r2, factor_r2) %>%
+  arrange(desc(R2)) %>%
+  mutate(significant = p_value < 0.05)
+
+print(envfit_summary)
+```
+# Ranked bar chart of R² values by variable
+# Variables with high R² and significant p-values are the ones most 
+# strongly structuring the ordination. These are the best candidates
+# for explaining cross-fire severity patterns in the white paper.
+
+
+# Fuel characteristics (fuel model and vegetation type) are the primary
+# structuring forces of fire severity patterns across the landscape.
+# Climate stress (VPDmax) and topography (elevation) play a secondary but
+# still meaningful role.
+```{r}
+envfit_summary <- envfit_summary %>%
+  mutate(variable_label = case_when(
+    variable == "fuel_model_group"      ~ "Fuel Model Type",
+    variable == "vegetation_type_group" ~ "Vegetation Type",
+    variable == "elevation_m"           ~ "Elevation",
+    variable == "vpdmax"                ~ "Atmospheric Dryness (VPD)",
+    variable == "severity_class"        ~ "Severity Class",
+    variable == "fire_group"            ~ "Fire Group",
+    TRUE ~ variable
+  ))
+
+ggplot(envfit_summary, 
+       aes(x = reorder(variable_label, R2), y = R2)) +
+  geom_col(width = 0.65, fill = "#C51616") +
+  
+  # R² value labels on the end of each bar
+  geom_text(aes(label = round(R2, 2)),
+            hjust = -0.15,
+            fontface = "bold",
+            size = 5,
+            color = "gray20") +
+  
+  coord_flip(clip = "off") +
+  expand_limits(y = 0.9) +   # gives room for the labels past the bars
+  
+  labs(
+    title    = "What Drives Wildfire Severity Patterns?",
+    x        = NULL,         # y-axis label is self explanatory with readable names
+    y        = "R² (Proportion of Variance Explained)"
+  ) +
+  
+  theme_minimal(base_size = 15) +
+  theme(
+    plot.title       = element_text(face = "bold", size = 20, hjust = 0),
+    axis.text.y      = element_text(face = "bold", size = 14, color = "gray10"),
+    axis.text.x      = element_text(size = 12, color = "gray10"),
+    axis.title.x     = element_text(size = 13, color = "gray10",
+    panel.grid.major.y = element_blank(),   # removes horizontal gridlines
+    panel.grid.major.x = element_line(color = "gray90"),
+    legend.position  = "none",
+    plot.background  = element_rect(fill = "white", color = NA))
+  )
 ```
 
 
-#' 
 #' Non-Linear Clustering Options: UMAPS, Gower's Distances --> Use these if it is 
 #' found that linear relationships do not accurately represent the data and the 
 #' relationship between the variables. 
@@ -587,60 +826,6 @@ sig_fact_idx <- which(fit$factors$pvals < 0.05)
 fact_coords_sig <- as.data.frame(fit$factors$centroids[sig_fact_idx, , drop = FALSE])
 fact_coords_sig$variable <- rownames(fact_coords_sig)
 ```
-
-```{r}
-plot_3d_clean <- plot_ly() %>%
-  # 1. Add Data Points (Clean Legend)
-  add_trace(data = site_scores, 
-            x = ~NMDS1, y = ~NMDS2, z = ~NMDS3,
-            color = ~fire_group,          # One color per group
-            symbol = ~severity_class,     # Different shapes for severity
-            type = "scatter3d", 
-            mode = "markers",
-            marker = list(size = 3, opacity = 0.6),
-            # This 'text' appears when you hover over a point
-            text = ~paste("Fire Group:", fire_group, 
-                          "<br>Severity:", severity_class),
-            hoverinfo = "text") %>%
-  
-  layout(scene = list(aspectmode = "cube",
-                      xaxis = list(title = "NMDS1"),
-                      yaxis = list(title = "NMDS2"),
-                      zaxis = list(title = "NMDS3")),
-         legend = list(title = list(text = '<b>Fire Groups</b>')))
-
-plot_3d_clean
-```
-```{r}
-for (i in 1:nrow(vec_coords_sig)) {
-  plot_3d_clean <- plot_3d_clean %>%
-    add_trace(x = c(0, vec_coords_sig$NMDS1[i]), 
-              y = c(0, vec_coords_sig$NMDS2[i]), 
-              z = c(0, vec_coords_sig$NMDS3[i]),
-              type = "scatter3d", mode = "lines+text",
-              line = list(color = "black", width = 5),
-              text = c("", vec_coords_sig$variable[i]), # Label only at the tip
-              textposition = "top center",
-              name = paste("Driver:", vec_coords_sig$variable[i]),
-              showlegend = TRUE)
-}
-```
-
-# 3. Add Significant Factors (Red Text Centroids)
-```{r}
-# same issue as above, something wrong with x, y
-#plot_3d_clean <- plot_3d_clean %>%
-  #add_trace(data = fact_coords_sig, 
-            #x = ~NMDS1, y = ~NMDS2,
-            #type = "scatter3d", mode = "text",
-            #text = ~variable, 
-            #textfont = list(color = "red", size = 11),
-            #name = "Veg/Fuel Types",
-            #showlegend = TRUE)
-
-#plot_3d_clean
-```
-
 ## more hypothesis testing
 h0 = no difference between treated and untreated severity
 ha = there is a difference between treated and untreated severity
