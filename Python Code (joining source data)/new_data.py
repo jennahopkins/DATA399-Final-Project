@@ -237,7 +237,7 @@ for fire_name, raster_path in fires_mtbs.items():
         gdf = sample_raster(gdf, path, var)
 
     # add CAL FIRE data
-    gdf = add_treated(gdf, calfire_clip, raster_path)
+    gdf = add_treated(gdf, calfire_clip)
 
     # append to list of all cells
     all_cells.append(gdf)
