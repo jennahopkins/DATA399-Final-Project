@@ -1,34 +1,63 @@
-# DATA399-Final-Project
-Authors: Jenna Hopkins, Jerrick Little, Anujan Tennathur
+# Addressing Recent Spikes of Severity of Wildfires in Northern California With Data Analysis and Machine Learning
+This project analyzes environmental variables to model and predict wildfire risk, with the goal of informing land management decisions. For DATA399 Environmental Data Science taught by Professor Meunier.
 
-## Environmental Problem & Framing
-Wildfires in Northern California have increasingly burned at high severity due to climate change, historical fire suppression, and land-use change. In response, state and federal agencies have implemented fuel reduction treatments, but it seems current treatment placement and timing are insufficient to meaningfully reduce wildfire severity under modern fire regimes. This project evaluates the effectiveness of existing fuel reduction treatments by quantifying where and when treatments reduce severity and where they fail to identify gaps in current wildfire mitigation strategies and propose data-driven improved solutions to fuel reduction policies that are necessary to address identified gaps and sufficient to measurably reduce wildfire severity. Stakeholders include the California Department of Forestry and Fire Protection (CAL FIRE), federal land managers, and local governments, for whom wildfire severity is a risk management and resource allocation problem. Rightsholders include Indigenous tribes and wildfire-exposed communities, for whom wildfire severity threatens safety, livelihoods, and cultural landscapes. The solutions described by this project will not only help prevent wildfires and lessen their severity, but will lead to safer communities, richer and more abundant ecosystems, and healthier people.
+## Authors 
+- Jenna Hopkins - Willamette University, 3 + 1 MS Data Science Program, Data Science & Computer Science Major
+- Jerrick Little - Willamette University, 3 + 1 MS Data Science Program, Data Science Major
+- Anujan Tennathur - Willamette University, Data Science & Computer Science Major
 
-## Dataset Exploration
-### Dataset 1: CAL FIRE Fuel Reduction Projects (https://calfire-forestry.maps.arcgis.com/home/item.html?id=80d439247b99489a938b09a0d182173c)
-Spatial data on fuel reduction projects were obtained from the California Department of Forestry and Fire Protection (CAL FIRE) Open Data Portal and include polygon representations of completed fuel treatment areas across California with associated attribute information. This dataset is used to identify where and when fuel reduction treatments have been implemented and to evaluate their relationship with subsequent wildfire burn severity in Northern California. Some key variables are described below:
-* Variable 1: PROJECT_ID: ID number for each fuel reduction project (discrete)
-* Variable 2: PROJECT_TYPE: Type of fuel reduction activity (nominal)
-* Variable 3: PROJECT_STATUS: Overall project status (ordinal)
-* Variable 4: PROJECT_START_DATE: Datetime project activities started (continuous)
-* Variable 5: PROJECT_END_DATE: Datetime project activities ended (continuous)
-* Variable 6: NUM_TREATMENTS: Number of treatment activities within a project (discrete)
-* Variable 7: Shape_Area: Area of the treatment polygon (continuous)
-* Variable 8: geometry: Geometry of the project representing its spatial footprint (continuous)
+## Overview
+Repeated large-scale fire suppression without sufficient prevention measures has contributed to the accumulation of fuel understory in high-risk wildfire areas, increasing the severity of future wildfires. This risk is further intensified by anthropogenic climate change, which is driving drier atmospheric conditions and more flammable fuels. Contemporary wildfire detection and prediction has evolved from human observation to systems that use satellite imagery, ground-based sensors, and aerial surveillance. Despite these advancements, federal policy is still lagging behind modern-day research in regards to wildfire prevention and detection. 
+Wildfires in northern California are increasing in frequency, severity, and economic impact, with annual losses estimated between $394 and $893 billion, including property damage, health impacts, and suppression costs. Climate models project continued increases in temperature and fuel aridity due to anthropogenic climate change, which will further intensify wildfire activity. In addition, long-term fire suppression has contributed to fuel accumulation, increasing the likelihood of high-severity fire events. As a result, wildfire risk is growing while current mitigation efforts remain inconsistently aligned with environmental conditions that drive fire severity. 
+Two solutions are developed to address inefficient fuel treatment placement in northern California. The first is a spatial wildfire severity risk model that uses environmental predictors to identify areas with high likelihood of severe fire, producing interpretable risk surfaces that generalize to new fire events. This improves allocation of limited resources by prioritizing high-risk locations. The second is a fire regime classification framework that identifies distinct ecological and climatic fire environments and links them to appropriate treatment strategies. This improves treatment effectiveness by aligning interventions with local fuel and environmental conditions. Together, these solutions address both where treatments should be placed and how they should be implemented.
+It is recommended that land management agencies transition from historically driven treatment strategies to a risk-based framework. This approach combines the predictive spatial model from Solution 1 to identify high-risk areas with the regime-based framework from Solution 2 to guide treatment selection within those areas. This integrated system improves the efficiency and effectiveness of fuel treatments by ensuring that both placement and treatment type are aligned with environmental fire risk.
 
-### Dataset 2: Interagency Remote Automatic Weather Stations (RAWS) (https://data-nifc.opendata.arcgis.com/datasets/nifc::public-view-interagency-remote-automatic-weather-stations-raws/about)
-This dataset collects data from Remote Automatic Weather Stations (RAWS), self-contained, portable, and permanent, solar powered weather stations that provide timely local weather data used primarily in fire management. The data from this will strengthen our proposed ideas by comparing times and key variables down below:
-* Variable 1: Wind Speed MPH: Measurement of wind in MPH (continuous)
-* Variable 2: Relativel Humidity: Measurement of humidity in percentage format (continuous)
-* Variable 3: Fuel Temperature: Physical measurement in F of how hot the fuel is (continuous)
-* Variable 4: Air temperaturee, Standard Placement: Measurement of air temperature  (continuous)
-* Variable 5: Rain accumulation: Measurement of inches of precipitation (continuous)
+## Data Sources
+* MTBS (Monitoring Trends in Burn Severity)
+* CAL FIRE (California Department of Forestry and Fire Protection)
+* LANDFIRE (Landscape Fire and Resource Management Planning Tools)
+* PRISM (Parameter-elevation Regressions on Independent Slopes Model)
 
+Raw data files are too big to be stored on GitHub, and can be found in this Google Drive folder: https://drive.google.com/drive/folders/1ywLNy2Vk8i748Z1bfy3FXhVBVB3FLQhz?usp=sharing 
 
-### Dataset 3: California Weather and Fire Prediction Dataset (1984–2025) (https://zenodo.org/records/14712845)
-This dataset holds comprehensive data on California wildfires starting from the 1980s till 2025. What makes this dataset special is some of it's unique characteristics. It incorporates meterological data from the NOAA Climate Data online with the fire incident data published by CAL FIRE. Importantly, this dataset holds several engineered features, which is helpful when trying to create predictive models, as we have organized and specific features to base the models off of.
-* Variable 1: TEMP_RANGE: The difference between maximum and minimum temperatures, indicating daily temperature variability. (Continuous)
-* Variable 2: LAGGED_AVG_WIND_SPEED: Average wind speed over the preceding 7 days, indicating sustained wind patterns. (Continuous)
-* Variable 3: SEASON: The season of the observation (Winter, Spring, Summer, Fall). (Ordinal)
-* Variable 4: PRECIPITATION: Daily precipitation in inches. (Continuous)
-* Variable 5: YEAR: The year of the observation. (Discrete)
+## Methods
+We applied the following techniques:
+
+- Data joining in Python -> combined_dataset.csv
+- Dataset preprocessing in R
+- Normality distribution tests
+    - Shapiro test
+    - Anderson-Darling test
+- Testing for differences in severity across fires
+    - Kruskall-Wallis test
+    - Dunn's test
+- Forming fire group clusters
+    - Hierarchial Cluster Analysis
+    - Elbow Method
+- Unsupervised machine learning
+    - NMDS
+    - UMAP
+    - HBDSCAN
+- Supervised machine learning
+    - Random Forest
+
+## Key Findings
+
+## Repository Structure
+|--- AnalysisDatasets/
+|    |--- combined_dataset.csv
+|    |--- new_fiers_dataset.csv
+|--- Python Code (joining source data)/
+|    |--- join_dataset.py
+|    |--- new_data.py
+|--- R Code (analysis)/
+|    |---
+|--- .gitignore
+|--- README.md
+
+## How to Run
+1. Clone the repository
+2. Run script:
+   - `AJ_CODE_RMD.Rmd`
+
+## White Paper
