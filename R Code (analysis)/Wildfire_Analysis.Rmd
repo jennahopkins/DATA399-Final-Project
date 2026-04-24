@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "Wildfire Analysis using Machine Learning and Data Analysis"
 author: "Jenna Hopkins"
 date: "2026-03-21"
 output: pdf_document
@@ -9,8 +9,8 @@ output: pdf_document
 #' Reading in Dataset
 ```{r}
 #setwd("C://Users/anujantennathur/Documents/GitHub/DATA399-Final-Project")
-setwd("C://Users/jenna/Documents/DATA399/DATA399-Final-Project")
-#setwd("C://Users/jerri/OneDrive/Documents/DATA399/DATA399-Final-Project")
+#setwd("C://Users/jenna/Documents/DATA399/DATA399-Final-Project")
+setwd("C://Users/jerri/OneDrive/Documents/DATA399/DATA399-Final-Project/Final Project")
 
 set.seed(444)
 
@@ -51,7 +51,7 @@ library(scales)
 library(patchwork)
 library(caret)
 
-ds_fire_og = read_csv("AnalysisDatasets/combined_dataset.csv")
+ds_fire = read_csv("combined_dataset.csv")
 ```
 
 
@@ -90,52 +90,7 @@ ds_fire %>%
   theme_minimal()
 ```
 
-## Severity levels of each fire within California
-```{r}
-ca = map_data("state") %>% filter(region == "california")
-# Create one label point per fire at the centroid of its points
-fire_labels = ds_fire %>%
-  group_by(fire) %>%
-  summarise(
-    x = mean(x, na.rm = TRUE),
-    y = mean(y, na.rm = TRUE)
-  ) %>%
-  mutate(fire_label = gsub("_", " ", fire))
 
-ggplot() +
-  geom_polygon(data = ca, aes(x = long, y = lat, group = group),
-               fill = "grey90", color = "grey50") +
-  geom_point(data = ds_fire, aes(x = x, y = y, color = severity_class),
-             size = 0.8, alpha = 0.7) +
-  geom_label_repel(data = fire_labels, aes(x = x, y = y, label = fire_label),
-                   size = 3,
-                   fontface = "bold",
-                   fill = "white",
-                   color = "black",
-                   label.padding = unit(0.15, "lines"),
-                   box.padding = unit(0.4, "lines"),
-                   max.overlaps = 20) +
-  scale_color_manual(values = c(
-    "Increased_Vegetation" = "#1a9641",
-    "Low_Severity"         = "#a1dab4",
-    "Moderate_Severity"    = "#fd8d3c",
-    "High Severity"        = "#bd0026"
-  ), labels = c("Increased_Vegetation" = "Increased Vegetation",
-                "Low_Severity" = "Low Severity",
-                "Moderate_Severity" = "Moderate Severity",
-                "High Severity" = "High Severity")) +
-  coord_fixed(1.3, xlim = c(-125, -119), ylim = c(38, 42)) +
-  theme_minimal() +
-  labs(title = "Burn Severity Across 10 Northern California Fires",
-       color = "Severity Class", x = "Longitude", y = "Latitude") +
-  theme(legend.position = "top", legend.key.size = unit(5, "mm"))+
-  guides(
-    color = guide_legend(
-      override.aes = list(size = 5),
-      title.theme = element_text(face = "bold", size = 11),
-      label.theme = element_text(size = 10)
-    ))
-```
 
 # Tests for Normality on Each Fire
 
@@ -316,6 +271,74 @@ ds_fire = ds_fire %>%
   )
 ```
 
+```{r}
+#Make a copy of ds_fire for keeping actual data separate
+ds_fire_map = ds_fire
+# get rid of severity outliers
+ds_fire_map = ds_fire_map %>%
+  group_by(fire) %>%
+  filter(
+    severity > quantile(severity, 0.01, na.rm=TRUE),
+    severity < quantile(severity, 0.99, na.rm=TRUE)
+  ) %>%
+  ungroup()
+# classify severity
+ds_fire_map = ds_fire_map %>%
+  mutate(
+    severity_class = case_when(
+      severity < -100 ~ "Increased_Vegetation",
+      severity >= -100 & severity <= 100 ~ "Low_Severity",
+      severity > 100 & severity <= 270 ~ "Moderate_Severity",
+      TRUE ~ "High Severity"
+    ),
+    severity_class = factor(severity_class)
+  )
+
+ca = map_data("state") %>% filter(region == "california")
+# Create one label point per fire at the centroid of its points
+fire_labels = ds_fire_map %>%
+  group_by(fire) %>%
+  summarise(
+    x = mean(x, na.rm = TRUE),
+    y = mean(y, na.rm = TRUE)
+  ) %>%
+  mutate(fire_label = gsub("_", " ", fire))
+
+ggplot() +
+  geom_polygon(data = ca, aes(x = long, y = lat, group = group),
+               fill = "grey90", color = "grey50") +
+  geom_point(data = ds_fire_map, aes(x = x, y = y, color = severity_class),
+             size = 0.8, alpha = 0.7) +
+  geom_label_repel(data = fire_labels, aes(x = x, y = y, label = fire_label),
+                   size = 3,
+                   fontface = "bold",
+                   fill = "white",
+                   color = "black",
+                   label.padding = unit(0.15, "lines"),
+                   box.padding = unit(0.4, "lines"),
+                   max.overlaps = 20) +
+  scale_color_manual(values = c(
+    "Increased_Vegetation" = "#1a9641",
+    "Low_Severity"         = "#a1dab4",
+    "Moderate_Severity"    = "#fd8d3c",
+    "High Severity"        = "#bd0026"
+  ), labels = c("Increased_Vegetation" = "Increased Vegetation",
+                "Low_Severity" = "Low Severity",
+                "Moderate_Severity" = "Moderate Severity",
+                "High Severity" = "High Severity")) +
+  coord_fixed(1.3, xlim = c(-125, -119), ylim = c(38, 42)) +
+  theme_minimal() +
+  labs(title = "Burn Severity Across 10 Northern California Fires",
+       color = "Severity Class", x = "Longitude", y = "Latitude") +
+  theme(legend.position = "top", legend.key.size = unit(5, "mm"))+
+  guides(
+    color = guide_legend(
+      override.aes = list(size = 5),
+      title.theme = element_text(face = "bold", size = 11),
+      label.theme = element_text(size = 10)
+    ))
+
+```
 # Unsupervised Machine Learning
 First, we need to do some additional wrangling.
 
@@ -358,6 +381,7 @@ ds_fire = ds_fire %>%
   )
 ```
 
+
 ## Non-Metric Multidimensional Scaling (NMDS) - Non-linear:
 Non-linear dimensionality reduction technique used to visualize similarity or dissimilarity between complex datasets. Focuses on preserving the rank-order of distances between samples, making it ideal for ecological and high-dimensional data that do not follow linear distributions. Used as a tool for visualization and EDA rather than direct prediction, as it helps identify clusters, patterns, and gradients in data.
 
@@ -367,8 +391,8 @@ The Bray-Curtis distance, which is used to calculate the distance for the NMDS m
 env_data = ds_fire %>%
   select(
     #ppt,
-    #tmax,
-    vpdmax,
+    tmax,
+    #vpdmax,
     #canopy_cover,
     #slope_deg,
     #aspect_deg,
@@ -379,7 +403,7 @@ env_data = ds_fire %>%
 
 dist_matrix = daisy(env_data, metric = "gower")
 
-nmds_result_3d = metaMDS(dist_matrix, k = 3, trymax = 25, autotransform = FALSE)
+nmds_result_3d = metaMDS(dist_matrix, k = 3, trymax = 10, autotransform = FALSE)
 
 nmds_matrix_3d = as.matrix(nmds_result_3d$points)
 
@@ -414,21 +438,21 @@ Since we have both continuous and categorical factors in our fit variable, we ne
 
 Step 1: Extract site scores from the 3D NMDS result
 ```{r}
-site_scores = as.data.frame(nmds_result_3d$points)
-colnames(site_scores) = c("NMDS1", "NMDS2", "NMDS3")
-site_scores$fire_group = ds_fire$fire_group
-site_scores$severity_class = ds_fire$severity_class
+site_scores <- as.data.frame(nmds_result_3d$points)
+colnames(site_scores) <- c("NMDS1", "NMDS2", "NMDS3")
+site_scores$fire_group     <- ds_fire$fire_group
+site_scores$severity_class <- ds_fire$severity_class
 ```
 
 Step 2: Rerun envfit on the raw points matrix for vectors and factors
 ```{r}
-fit_vec = envfit(
+fit_vec <- envfit(
   nmds_result_3d$points,
   ds_fire %>% select(vpdmax, elevation_m),
   perm = 999
 )
 
-fit_fac = envfit(
+fit_fac <- envfit(
   nmds_result_3d$points,
   ds_fire %>% select(fuel_model_group, vegetation_type_group,
                   severity_class, fire_group),
@@ -438,42 +462,42 @@ fit_fac = envfit(
 
 Step 3: Build vec_coords and fact_coords safely
 ```{r}
-vec_coords = as.data.frame(fit_vec$vectors$arrows)
-colnames(vec_coords) = c("NMDS1", "NMDS2")
-vec_coords$NMDS3 = 0
-vec_coords$variable = rownames(vec_coords)
+vec_coords <- as.data.frame(fit_vec$vectors$arrows)
+colnames(vec_coords) <- c("NMDS1", "NMDS2")
+vec_coords$NMDS3    <- 0
+vec_coords$variable <- rownames(vec_coords)
 
-fact_coords = as.data.frame(fit_fac$factors$centroids)
-colnames(fact_coords) = c("NMDS1", "NMDS2")
-fact_coords$NMDS3 = 0
-fact_coords$variable = rownames(fact_coords)
+fact_coords <- as.data.frame(fit_fac$factors$centroids)
+colnames(fact_coords) <- c("NMDS1", "NMDS2")
+fact_coords$NMDS3    <- 0
+fact_coords$variable <- rownames(fact_coords)
 ```
 
 Step 4: Clean up factor labels
 
 Keeping only fuel model centroids -- vegetation type adds too many overlapping labels. Stripping the prefix so "Grass" shows instead of "fuel_model_groupGrass"
 ```{r}
-fact_coords_plot = fact_coords %>%
+fact_coords_plot <- fact_coords %>%
   filter(grepl("fuel_model_group", variable)) %>%
   mutate(variable = gsub("fuel_model_group", "", variable))
 ```
 
 Step 5: Shared styling
 ```{r}
-group_colors = c(
-  "Group 1" = "#B85042",
-  "Group 2" = "#4A7C59",
-  "Group 3" = "#4A6FA5"
+group_colors <- c(
+  "1" = "#B85042",
+  "2" = "#4A7C59",
+  "3" = "#4A6FA5"
 )
 
-severity_shapes = c(
+severity_shapes <- c(
   "High Severity"        = 17,
   "Increased_Vegetation" = 15,
   "Low_Severity"         = 16,
   "Moderate_Severity"    = 18
 )
 
-nmds_theme = theme_minimal(base_size = 13) +
+nmds_theme <- theme_minimal(base_size = 13) +
   theme(
     plot.title         = element_text(face = "bold", size = 14, hjust = 0.5),
     panel.grid.minor   = element_blank(),
@@ -490,23 +514,23 @@ nmds_theme = theme_minimal(base_size = 13) +
 
 Step 6: Panel builder function
 ```{r}
-make_nmds_panel = function(xvar, yvar) {
+make_nmds_panel <- function(xvar, yvar) {
   
-  pts = site_scores %>% 
+  pts <- site_scores %>% 
     rename(x_axis = all_of(xvar), y_axis = all_of(yvar))
   
-  vec = vec_coords %>% 
+  vec <- vec_coords %>% 
     rename(x_axis = all_of(xvar), y_axis = all_of(yvar))
   
-  fct = fact_coords_plot %>% 
+  fct <- fact_coords_plot %>% 
     rename(x_axis = all_of(xvar), y_axis = all_of(yvar))
   
   # Scale arrows relative to the data range so they're always visible
-  x_range = diff(range(pts$x_axis, na.rm = TRUE))
-  y_range = diff(range(pts$y_axis, na.rm = TRUE))
-  arrow_scale = min(x_range, y_range) * 0.35
+  x_range <- diff(range(pts$x_axis, na.rm = TRUE))
+  y_range <- diff(range(pts$y_axis, na.rm = TRUE))
+  arrow_scale <- min(x_range, y_range) * 0.35
   
-  vec = vec %>%
+  vec <- vec %>%
     mutate(x_end = x_axis * arrow_scale,
            y_end = y_axis * arrow_scale)
   
@@ -525,7 +549,7 @@ make_nmds_panel = function(xvar, yvar) {
                aes(x = x_end * 1.25, y = y_end * 1.25, label = variable),
                inherit.aes = FALSE,
                size = 5, fontface = "bold", color = "black",
-               fill = "white", linewidth = 0,
+               fill = "white", label.size = 0,
                label.padding = unit(0.15, "lines")) +
     
     # Fuel model centroids with repelled labels
