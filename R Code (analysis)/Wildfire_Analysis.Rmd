@@ -1,7 +1,7 @@
 ---
 title: "Wildfire Analysis using Machine Learning and Data Analysis"
-author: "Jenna Hopkins"
-date: "2026-03-21"
+author: "Jenna Hopkins, Jerrick Little, Anujan Tennathur"
+date: "2026-04-28"
 output: pdf_document
 ---
 
@@ -59,7 +59,7 @@ ds_fire = read_csv("combined_dataset.csv")
 
 ## Histograms
 ```{r}
-ds_fire %>%
+ds_fire_og %>%
   ggplot(aes(x = severity)) +
   geom_histogram(aes(y = after_stat(density)), 
                  binwidth = 25,
@@ -76,7 +76,7 @@ ds_fire %>%
   theme_minimal()
 
 
-ds_fire %>%
+ds_fire_og %>%
   ggplot(aes(x = canopy_cover)) +
   geom_bar()+
   # geom_density(color = "red", size = 1) +
@@ -90,31 +90,87 @@ ds_fire %>%
   theme_minimal()
 ```
 
+## Severity levels of each fire within California
+```{r}
+ca = map_data("state") %>% filter(region == "california")
+# Create one label point per fire at the centroid of its points
+fire_labels = ds_fire_og %>%
+  group_by(fire) %>%
+  summarise(
+    x = mean(x, na.rm = TRUE),
+    y = mean(y, na.rm = TRUE)
+  ) %>%
+  mutate(fire_label = gsub("_", " ", fire))
 
+ds_fire_map = ds_fire_og %>%
+  mutate(
+    severity_class = case_when(
+      severity <= -100 ~ "Increased_Vegetation",
+      severity >= -100 & severity <= 100 ~ "Low_Severity",
+      severity >= 100 & severity <= 270 ~ "Moderate_Severity",
+      TRUE ~ "High Severity"
+    ),
+    severity_class = factor(severity_class)
+  )
+
+ggplot() +
+  geom_polygon(data = ca, aes(x = long, y = lat, group = group),
+               fill = "grey90", color = "grey50") +
+  geom_point(data = ds_fire_map, aes(x = x, y = y, color = severity_class),
+             size = 0.8, alpha = 0.7) +
+  geom_label_repel(data = fire_labels, aes(x = x, y = y, label = fire_label),
+                   size = 3,
+                   fontface = "bold",
+                   fill = "white",
+                   color = "black",
+                   label.padding = unit(0.15, "lines"),
+                   box.padding = unit(0.4, "lines"),
+                   max.overlaps = 20) +
+  scale_color_manual(values = c(
+    "Increased_Vegetation" = "#1a9641",
+    "Low_Severity"         = "#a1dab4",
+    "Moderate_Severity"    = "#fd8d3c",
+    "High Severity"        = "#bd0026"
+  ), labels = c("Increased_Vegetation" = "Increased Vegetation",
+                "Low_Severity" = "Low Severity",
+                "Moderate_Severity" = "Moderate Severity",
+                "High Severity" = "High Severity")) +
+  coord_fixed(1.3, xlim = c(-125, -119), ylim = c(38, 42)) +
+  theme_minimal() +
+  labs(title = "Burn Severity Across 10 Northern California Fires",
+       color = "Severity Class", x = "Longitude", y = "Latitude") +
+  theme(legend.position = "top", legend.key.size = unit(5, "mm"))+
+  guides(
+    color = guide_legend(
+      override.aes = list(size = 5),
+      title.theme = element_text(face = "bold", size = 11),
+      label.theme = element_text(size = 10)
+    ))
+```
 
 # Tests for Normality on Each Fire
 
 Creating a list of points from each fire so each can be individually tested
 ```{r}
-Antelope_2021 = ds_fire %>%
+Antelope_2021 = ds_fire_og %>%
   filter(fire == "Antelope_2021")
-Bald_2014 = ds_fire %>%
+Bald_2014 = ds_fire_og %>%
   filter(fire == "Bald_2014")
-Carr_2018 = ds_fire %>%
+Carr_2018 = ds_fire_og %>%
   filter(fire == "Carr_2018")
-McKinney_2022 = ds_fire %>%
+McKinney_2022 = ds_fire_og %>%
   filter(fire == "McKinney_2022")
-Dixie_2021 = ds_fire %>%
+Dixie_2021 = ds_fire_og %>%
   filter(fire == "Dixie_2021")
-Monument_2021 = ds_fire %>%
+Monument_2021 = ds_fire_og %>%
   filter(fire == "Monument_2021")
-King_2014 = ds_fire %>%
+King_2014 = ds_fire_og %>%
   filter(fire == "King_2014")
-NorthComplex_2020 = ds_fire %>%
+NorthComplex_2020 = ds_fire_og %>%
   filter(fire == "NorthComplex_2020")
-Hat_2018 = ds_fire %>%
+Hat_2018 = ds_fire_og %>%
   filter(fire == "Hat_2018")
-Camp_2018 = ds_fire %>%
+Camp_2018 = ds_fire_og %>%
   filter(fire == "Camp_2018")
 
 fire_list = list(
@@ -151,7 +207,7 @@ h0 = there is no difference of median severity between any fires
 
 ha = there is a difference of median severity between at least two fires
 ```{r}
-kruskal.test(severity ~ fire, data = ds_fire)
+kruskal.test(severity ~ fire, data = ds_fire_og)
 ```
 
 Kruskal-Wallis chi-squared = 90.82, df = 9, p-value = 1.115e-15
@@ -167,7 +223,7 @@ The Kruskal-Wallis test provides a result that proves differences exist, but can
 Tells us which fires are different
 ```{r}
 dunn_results = dunnTest(severity ~ fire, 
-                         data = ds_fire, 
+                         data = ds_fire_og, 
                          method = "holm")
 print(dunn_results)
 
@@ -201,7 +257,7 @@ With the above established, let's use Hierarchical Cluster Analysis (HCA), an un
 
 ## HCA Plot
 ```{r}
-fire_medians = aggregate(severity ~ fire, data = ds_fire, FUN = median)
+fire_medians = aggregate(severity ~ fire, data = ds_fire_og, FUN = median)
 dist_matrix = dist(fire_medians$severity)
 clusters = hclust(dist_matrix)
 plot(clusters, labels = fire_medians$fire, main = "Fire Similarity Groups")
@@ -260,7 +316,7 @@ group_3_names = fire_groupings %>%
   filter(group == 3) %>%
   pull(fire)
 
-ds_fire = ds_fire %>%
+ds_fire = ds_fire_og %>%
   mutate(
     fire_group = case_when(
       fire %in% group_1_names ~ "1",
@@ -271,76 +327,6 @@ ds_fire = ds_fire %>%
   )
 ```
 
-```{r}
-#Make a copy of ds_fire for keeping actual data separate
-ds_fire_map = ds_fire
-# get rid of severity outliers
-ds_fire_map = ds_fire_map %>%
-  group_by(fire) %>%
-  filter(
-    severity > quantile(severity, 0.01, na.rm=TRUE),
-    severity < quantile(severity, 0.99, na.rm=TRUE)
-  ) %>%
-  ungroup()
-# classify severity
-ds_fire_map = ds_fire_map %>%
-  mutate(
-    severity_class = case_when(
-      severity < -100 ~ "Increased_Vegetation",
-      severity >= -100 & severity <= 100 ~ "Low_Severity",
-      severity > 100 & severity <= 270 ~ "Moderate_Severity",
-      TRUE ~ "High Severity"
-    ),
-    severity_class = factor(severity_class, 
-      levels = c("High Severity", "Moderate_Severity", 
-                 "Low_Severity", "Increased_Vegetation"))
-  )
-
-ca = map_data("state") %>% filter(region == "california")
-# Create one label point per fire at the centroid of its points
-fire_labels = ds_fire_map %>%
-  group_by(fire) %>%
-  summarise(
-    x = mean(x, na.rm = TRUE),
-    y = mean(y, na.rm = TRUE)
-  ) %>%
-  mutate(fire_label = gsub("_", " ", fire))
-
-ggplot() +
-  geom_polygon(data = ca, aes(x = long, y = lat, group = group),
-               fill = "grey90", color = "grey50") +
-  geom_point(data = ds_fire_map, aes(x = x, y = y, color = severity_class),
-             size = 0.8, alpha = 0.7) +
-  geom_label_repel(data = fire_labels, aes(x = x, y = y, label = fire_label),
-                   size = 3,
-                   fontface = "bold",
-                   fill = "white",
-                   color = "black",
-                   label.padding = unit(0.15, "lines"),
-                   box.padding = unit(0.4, "lines"),
-                   max.overlaps = 20) +
-  scale_color_manual(values = c(
-    "Increased_Vegetation" = "#1a9641",
-    "Low_Severity"         = "#a1dab4",
-    "Moderate_Severity"    = "#fd8d3c",
-    "High Severity"        = "#bd0026"
-  ), labels = c("Increased_Vegetation" = "Increased Vegetation",
-                "Low_Severity" = "Low Severity",
-                "Moderate_Severity" = "Moderate Severity",
-                "High Severity" = "High Severity")) +
-  coord_fixed(1.3, xlim = c(-125, -119), ylim = c(38, 42)) +
-  theme_minimal() +
-  labs(title = "Burn Severity Across 10 Northern California Fires",
-       color = "Severity Class", x = "Longitude", y = "Latitude") +
-  theme(legend.position = "top", legend.key.size = unit(5, "mm"))+
-  guides(
-    color = guide_legend(
-      override.aes = list(size = 5),
-      title.theme = element_text(face = "bold", size = 11),
-      label.theme = element_text(size = 10)
-    ))
-
-```
 # Unsupervised Machine Learning
 First, we need to do some additional wrangling.
 
@@ -405,7 +391,7 @@ env_data = ds_fire %>%
 
 dist_matrix = daisy(env_data, metric = "gower")
 
-nmds_result_3d = metaMDS(dist_matrix, k = 3, trymax = 10, autotransform = FALSE)
+nmds_result_3d = metaMDS(dist_matrix, k = 3, trymax = 25, autotransform = FALSE)
 
 nmds_matrix_3d = as.matrix(nmds_result_3d$points)
 
@@ -420,18 +406,18 @@ print(fit)
 
 Filter Vectors for significance (numerical)
 ```{r}
-sig_vec_idx <- which(fit$vectors$pvals < 0.05)
-vec_coords_sig <- as.data.frame(fit$vectors$arrows[sig_vec_idx, , drop = FALSE])
-vec_coords_sig$variable <- rownames(vec_coords_sig)
+sig_vec_idx = which(fit$vectors$pvals < 0.05)
+vec_coords_sig = as.data.frame(fit$vectors$arrows[sig_vec_idx, , drop = FALSE])
+vec_coords_sig$variable = rownames(vec_coords_sig)
 ```
 
 
 Filter Factors for significance(categorical)
 ```{r}
-sig_fact_idx <- which(fit$factors$pvals < 0.05)
+sig_fact_idx = which(fit$factors$pvals < 0.05)
 # This identifies which CATEGORIES (e.g., 'Timber') belong to significant groups
-fact_coords_sig <- as.data.frame(fit$factors$centroids[sig_fact_idx, , drop = FALSE])
-fact_coords_sig$variable <- rownames(fact_coords_sig)
+fact_coords_sig = as.data.frame(fit$factors$centroids[sig_fact_idx, , drop = FALSE])
+fact_coords_sig$variable = rownames(fact_coords_sig)
 ```
 
 
@@ -440,21 +426,21 @@ Since we have both continuous and categorical factors in our fit variable, we ne
 
 Step 1: Extract site scores from the 3D NMDS result
 ```{r}
-site_scores <- as.data.frame(nmds_result_3d$points)
-colnames(site_scores) <- c("NMDS1", "NMDS2", "NMDS3")
-site_scores$fire_group     <- ds_fire$fire_group
-site_scores$severity_class <- ds_fire$severity_class
+site_scores = as.data.frame(nmds_result_3d$points)
+colnames(site_scores) = c("NMDS1", "NMDS2", "NMDS3")
+site_scores$fire_group     = ds_fire$fire_group
+site_scores$severity_class = ds_fire$severity_class
 ```
 
 Step 2: Rerun envfit on the raw points matrix for vectors and factors
 ```{r}
-fit_vec <- envfit(
+fit_vec = envfit(
   nmds_result_3d$points,
   ds_fire %>% select(vpdmax, elevation_m),
   perm = 999
 )
 
-fit_fac <- envfit(
+fit_fac = envfit(
   nmds_result_3d$points,
   ds_fire %>% select(fuel_model_group, vegetation_type_group,
                   severity_class, fire_group),
@@ -464,42 +450,42 @@ fit_fac <- envfit(
 
 Step 3: Build vec_coords and fact_coords safely
 ```{r}
-vec_coords <- as.data.frame(fit_vec$vectors$arrows)
-colnames(vec_coords) <- c("NMDS1", "NMDS2")
-vec_coords$NMDS3    <- 0
-vec_coords$variable <- rownames(vec_coords)
+vec_coords = as.data.frame(fit_vec$vectors$arrows)
+colnames(vec_coords) = c("NMDS1", "NMDS2")
+vec_coords$NMDS3    = 0
+vec_coords$variable = rownames(vec_coords)
 
 fact_coords <- as.data.frame(fit_fac$factors$centroids)
-colnames(fact_coords) <- c("NMDS1", "NMDS2")
-fact_coords$NMDS3    <- 0
-fact_coords$variable <- rownames(fact_coords)
+colnames(fact_coords) = c("NMDS1", "NMDS2")
+fact_coords$NMDS3    = 0
+fact_coords$variable = rownames(fact_coords)
 ```
 
 Step 4: Clean up factor labels
 
 Keeping only fuel model centroids -- vegetation type adds too many overlapping labels. Stripping the prefix so "Grass" shows instead of "fuel_model_groupGrass"
 ```{r}
-fact_coords_plot <- fact_coords %>%
+fact_coords_plot = fact_coords %>%
   filter(grepl("fuel_model_group", variable)) %>%
   mutate(variable = gsub("fuel_model_group", "", variable))
 ```
 
 Step 5: Shared styling
 ```{r}
-group_colors <- c(
+group_colors = c(
   "1" = "#B85042",
   "2" = "#4A7C59",
   "3" = "#4A6FA5"
 )
 
-severity_shapes <- c(
+severity_shapes = c(
   "High Severity"        = 17,
   "Increased_Vegetation" = 15,
   "Low_Severity"         = 16,
   "Moderate_Severity"    = 18
 )
 
-nmds_theme <- theme_minimal(base_size = 13) +
+nmds_theme = theme_minimal(base_size = 13) +
   theme(
     plot.title         = element_text(face = "bold", size = 14, hjust = 0.5),
     panel.grid.minor   = element_blank(),
@@ -516,23 +502,23 @@ nmds_theme <- theme_minimal(base_size = 13) +
 
 Step 6: Panel builder function
 ```{r}
-make_nmds_panel <- function(xvar, yvar) {
+make_nmds_panel = function(xvar, yvar) {
   
-  pts <- site_scores %>% 
+  pts = site_scores %>% 
     rename(x_axis = all_of(xvar), y_axis = all_of(yvar))
   
-  vec <- vec_coords %>% 
+  vec = vec_coords %>% 
     rename(x_axis = all_of(xvar), y_axis = all_of(yvar))
   
-  fct <- fact_coords_plot %>% 
+  fct = fact_coords_plot %>% 
     rename(x_axis = all_of(xvar), y_axis = all_of(yvar))
   
   # Scale arrows relative to the data range so they're always visible
-  x_range <- diff(range(pts$x_axis, na.rm = TRUE))
-  y_range <- diff(range(pts$y_axis, na.rm = TRUE))
-  arrow_scale <- min(x_range, y_range) * 0.35
+  x_range = diff(range(pts$x_axis, na.rm = TRUE))
+  y_range = diff(range(pts$y_axis, na.rm = TRUE))
+  arrow_scale = min(x_range, y_range) * 0.35
   
-  vec <- vec %>%
+  vec = vec %>%
     mutate(x_end = x_axis * arrow_scale,
            y_end = y_axis * arrow_scale)
   
@@ -578,9 +564,6 @@ make_nmds_panel <- function(xvar, yvar) {
 
 Step 7: Build and view each panel individually
 ```{r}
-#Warning: No shared levels found between `names(values)` of the manual scale and the data's colour values.
-#Warning: No shared levels found between `names(values)` of the manual scale and the data's colour values.
-
 
 p1 = make_nmds_panel("NMDS1", "NMDS2")
 p2 = make_nmds_panel("NMDS1", "NMDS3")
@@ -1514,7 +1497,7 @@ cluster_t = cluster_t %>%
 
 # pivot longer
 df = cluster_t
-#df[,-1] <- lapply(df[,-1], as.numeric)
+df[,-1] <- lapply(df[,-1], as.numeric)
 df_long = df %>%
   pivot_longer(
     cols = -variable,
@@ -1531,13 +1514,14 @@ df_long = df_long %>%
   ) %>%
   ungroup()
 
+# get rid of unnecessary variables
+df_long = df_long %>%
+  filter(!variable %in% c("Veg: Barren", "Number of Points", "Severity"))
 
 # set the order that variable and cluster should appear in
 df_long$variable = factor(
   df_long$variable,
   levels = c(
-    "Severity",
-    "Number of Points",
     "VPD",
     "Elevation",
     "Slope",
@@ -1555,57 +1539,43 @@ df_long$variable = factor(
     "Veg: Herb",
     "Veg: Sparse",
     "Veg: Water",
-    "Veg: Agriculture",
-    "Veg: Barren"
+    "Veg: Agriculture"
   )
 )
-df_long$variable <- factor(df_long$variable, levels = rev(levels(df_long$variable)))
-df_long$cluster = factor(
-  df_long$cluster,
-  levels = c(
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "11"
-  )
+df_long$variable = factor(df_long$variable, levels = rev(levels(df_long$variable)))
+
+# set the order of the clusters so they are grouped by similar environment
+cluster_order = c(
+  "1","5","2",      # shrub/grass
+  "3","4",          # transitional
+  "6","7","9","10", # forest
+  "8","11"          # low fuel / edge
 )
 
-# final visualization of the heatmap and top part of the figure
+df_long$cluster = factor(df_long$cluster, levels = cluster_order)
+
+
+# final visualization of the heatmap part of the figure
 heatmap_plot = ggplot(df_long, aes(x = cluster, y = variable, fill = scaled)) +
   geom_tile(color = "white") +
   scale_fill_gradient(low = "white", high = "firebrick1") +
   geom_text(aes(label = round(value, 2)), size = 3) +
   theme_bw() +
   labs(
-    title = "Fire Regime Cluster Environmental Profiles and Recommended Treatments",
-    x = "Cluster",
-    y = "Variable",
+    x = NULL,
+    y = "Input Variable",
     fill = "Relative\nIntensity"
   ) +
-  guides(fill = guide_colorbar(
-    title.position = "left",
-    title.hjust = 0.5,
-    barwidth = 10,
-    barheight = 0.5
-    )) +
+  scale_x_discrete(position = "top") +
   theme(
-    legend.position = "top",
-    legend.box = "horizontal",
-    legend.key.height = unit(0.1, "cm"),
-    legend.key.width = unit(1, "cm"),
-    legend.text = element_text(size = 7),
-    legend.title = element_text(size = 8, margin = ggplot2::margin(r = 10)),
-    plot.margin = ggplot2::margin(1, 1, 1, 1),
-    plot.title = element_text(hjust = 2)
+    legend.position = "none",
+    axis.title.x = element_blank(),
+    axis.title.x.top = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.x.top = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.x.top = element_blank()
   )
-
 
 
 # bottom part of the figure, treatments for each cluster
@@ -1644,15 +1614,69 @@ p_treat = ggplot(treatments, aes(x = cluster, y = 1, label = treatment)) +
     plot.subtitle = element_text(
       hjust = 0.5,
       size = 9
-    )
+    ),
+    axis.title.y = element_text(
+  angle = 0,
+  vjust = 0.5,
+  hjust = 1,                  # anchor closer to plot
+  margin = ggplot2::margin(r = -100),   # pull it inward (negative = closer)
+  size = 10
+)
   ) +
-  labs(subtitle = "Recommended Treatments")
+  labs(y = "Recommended Treatment")
 
 
-# putting both plots together
-(heatmap_plot / p_treat) +
-  plot_layout(heights = c(4, 1)) 
+# creating the labels for the cluster groupings to go above the heatmap
+group_labels = tibble(
+  group = c("Shrub / Grass", "Transitional", "Forest", "Low Fuel / Edge"),
+  xmin = c(0.5, 3.5, 5.5, 9.5),
+  xmax = c(3.5, 5.5, 9.5, 11.5),
+  xmid = (xmin + xmax) / 2
+)
+
+# plot for the cluster groupings
+group_bar = ggplot(group_labels) +
+  geom_rect(aes(xmin = xmin, xmax = xmax, ymin = 0, ymax = 1),
+            fill = "grey90", color = "white") +
+  geom_text(aes(x = xmid, y = 0.5, label = group),
+            size = 2.5, fontface = "bold") +
+  scale_x_continuous(
+    limits = c(0.5, length(cluster_order) + 0.5),
+    breaks = seq_along(cluster_order),
+    labels = cluster_order,
+    expand = c(0, 0),
+    position = "top"
+  ) +
+  labs(x = "Cluster") +
+  theme_void() +
+  theme(
+    axis.text.x.top = element_text(size = 9),
+    axis.title.x.top = element_text(size = 10, face = "bold", margin = ggplot2::margin(b = 4)),
+    plot.margin = ggplot2::margin(0, 5, 0, 5)
+  )
+
+# putting all plots together
+final_plot = group_bar / heatmap_plot / p_treat +
+  plot_layout(
+    heights = c(0.55, 4, 1),
+    guides = "collect"
+  ) +
+  plot_annotation(
+    title = "Fire Regime Environmental Profiles and Associated Treatments"
+  ) &
+  theme(
+    legend.position = "top",
+    legend.box = "horizontal",
+    legend.key.height = unit(0.1, "cm"),
+    legend.key.width = unit(1, "cm"),
+    legend.text = element_text(size = 7),
+    legend.title = element_text(size = 8, margin = ggplot2::margin(r = 10)),
+    plot.title = element_text(hjust = 0.5, face = "bold")
+  )
+
+final_plot
 ```
+
 
 
 
