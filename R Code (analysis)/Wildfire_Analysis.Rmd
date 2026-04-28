@@ -291,7 +291,9 @@ ds_fire_map = ds_fire_map %>%
       severity > 100 & severity <= 270 ~ "Moderate_Severity",
       TRUE ~ "High Severity"
     ),
-    severity_class = factor(severity_class)
+    severity_class = factor(severity_class, 
+      levels = c("High Severity", "Moderate_Severity", 
+                 "Low_Severity", "Increased_Vegetation"))
   )
 
 ca = map_data("state") %>% filter(region == "california")
