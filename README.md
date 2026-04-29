@@ -38,11 +38,11 @@ Raw data files are too big to be stored on GitHub, and can be found in this Goog
 ## Repository Structure
 
 - `AnalysisDatasets/` - Datasets used for analysis and modeling, created by the 4 data sources through python files
-- `Figures/` – Output figures used in the white paper 
+- `Figures/` - Output figures used in the white paper 
 - `Python Code (joining source data)/` - Python scripts to join data from our 4 sources to create datasets for analysis and modeling
-- `R Code (analysis)/` – Rmd file to perform data processing, analysis, modeling, and visualization 
-- `White Paper/` – Final white paper document  
-- `README.md` – Project overview and documentation 
+- `R Code (analysis)/` - Rmd file to perform data processing, analysis, modeling, and visualization 
+- `White Paper/` - Final white paper document  
+- `README.md` - Project overview and documentation 
 - `.gitignore` - Ignoring large source datasets and Mac files
 
 ## White Paper
@@ -53,8 +53,8 @@ This paper presents a data-driven framework combining spatial risk modeling and 
 
 ## Author Contributions
 
-- **Jenna Hopkins** – Joining source data, hypothesis testing, supervised modeling, solutions and recommendations
-- **Jerrick Little** – Stakeholder and policy research, EDA, hypothesis testing, problem description and recommendations
-- **AJ Tennathur** – Data processing, EDA, unsupervised learning, executive summary and background
+- **Jenna Hopkins** - Joining source data, hypothesis testing, supervised modeling, solutions and recommendations
+- **Jerrick Little** - Stakeholder and policy research, EDA, hypothesis testing, problem description and recommendations
+- **AJ Tennathur** - Data processing, EDA, unsupervised learning, executive summary and background
 
 All authors contributed in some way to subject research, data gathering, analysis, and modeling, and writing the white paper.
