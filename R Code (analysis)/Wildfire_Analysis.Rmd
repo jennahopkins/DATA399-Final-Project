@@ -10,7 +10,7 @@ output: pdf_document
 ```{r}
 #setwd("C://Users/anujantennathur/Documents/GitHub/DATA399-Final-Project")
 #setwd("C://Users/jenna/Documents/DATA399/DATA399-Final-Project")
-setwd("C://Users/jerri/OneDrive/Documents/DATA399/DATA399-Final-Project/Final Project")
+#setwd("C://Users/jerri/OneDrive/Documents/DATA399/DATA399-Final-Project")
 
 set.seed(444)
 
@@ -51,7 +51,7 @@ library(scales)
 library(patchwork)
 library(caret)
 
-ds_fire = read_csv("combined_dataset.csv")
+ds_fire_og = read_csv("AnalysisDatasets/combined_dataset.csv")
 ```
 
 
@@ -369,7 +369,6 @@ ds_fire = ds_fire %>%
   )
 ```
 
-
 ## Non-Metric Multidimensional Scaling (NMDS) - Non-linear:
 Non-linear dimensionality reduction technique used to visualize similarity or dissimilarity between complex datasets. Focuses on preserving the rank-order of distances between samples, making it ideal for ecological and high-dimensional data that do not follow linear distributions. Used as a tool for visualization and EDA rather than direct prediction, as it helps identify clusters, patterns, and gradients in data.
 
@@ -379,8 +378,8 @@ The Bray-Curtis distance, which is used to calculate the distance for the NMDS m
 env_data = ds_fire %>%
   select(
     #ppt,
-    tmax,
-    #vpdmax,
+    #tmax,
+    vpdmax,
     #canopy_cover,
     #slope_deg,
     #aspect_deg,
@@ -406,18 +405,18 @@ print(fit)
 
 Filter Vectors for significance (numerical)
 ```{r}
-sig_vec_idx = which(fit$vectors$pvals < 0.05)
-vec_coords_sig = as.data.frame(fit$vectors$arrows[sig_vec_idx, , drop = FALSE])
-vec_coords_sig$variable = rownames(vec_coords_sig)
+sig_vec_idx <- which(fit$vectors$pvals < 0.05)
+vec_coords_sig <- as.data.frame(fit$vectors$arrows[sig_vec_idx, , drop = FALSE])
+vec_coords_sig$variable <- rownames(vec_coords_sig)
 ```
 
 
 Filter Factors for significance(categorical)
 ```{r}
-sig_fact_idx = which(fit$factors$pvals < 0.05)
+sig_fact_idx <- which(fit$factors$pvals < 0.05)
 # This identifies which CATEGORIES (e.g., 'Timber') belong to significant groups
-fact_coords_sig = as.data.frame(fit$factors$centroids[sig_fact_idx, , drop = FALSE])
-fact_coords_sig$variable = rownames(fact_coords_sig)
+fact_coords_sig <- as.data.frame(fit$factors$centroids[sig_fact_idx, , drop = FALSE])
+fact_coords_sig$variable <- rownames(fact_coords_sig)
 ```
 
 
@@ -428,7 +427,7 @@ Step 1: Extract site scores from the 3D NMDS result
 ```{r}
 site_scores = as.data.frame(nmds_result_3d$points)
 colnames(site_scores) = c("NMDS1", "NMDS2", "NMDS3")
-site_scores$fire_group     = ds_fire$fire_group
+site_scores$fire_group = ds_fire$fire_group
 site_scores$severity_class = ds_fire$severity_class
 ```
 
@@ -452,12 +451,12 @@ Step 3: Build vec_coords and fact_coords safely
 ```{r}
 vec_coords = as.data.frame(fit_vec$vectors$arrows)
 colnames(vec_coords) = c("NMDS1", "NMDS2")
-vec_coords$NMDS3    = 0
+vec_coords$NMDS3 = 0
 vec_coords$variable = rownames(vec_coords)
 
-fact_coords <- as.data.frame(fit_fac$factors$centroids)
+fact_coords = as.data.frame(fit_fac$factors$centroids)
 colnames(fact_coords) = c("NMDS1", "NMDS2")
-fact_coords$NMDS3    = 0
+fact_coords$NMDS3 = 0
 fact_coords$variable = rownames(fact_coords)
 ```
 
@@ -564,6 +563,9 @@ make_nmds_panel = function(xvar, yvar) {
 
 Step 7: Build and view each panel individually
 ```{r}
+#Warning: No shared levels found between `names(values)` of the manual scale and the data's colour values.
+#Warning: No shared levels found between `names(values)` of the manual scale and the data's colour values.
+
 
 p1 = make_nmds_panel("NMDS1", "NMDS2")
 p2 = make_nmds_panel("NMDS1", "NMDS3")
