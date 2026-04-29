@@ -47,7 +47,7 @@ Raw data files are too big to be stored on GitHub, and can be found in [this Goo
 
 ## White Paper
 Read the full report here:  
-[Addressing Recent Spikes of Severity of Wildfires in Northern California with Data Analysis and Machine Learning](https://drive.google.com/file/d/1yda1wmDHoDYFRi5STZioqhLbWhNmdYv6/view?usp=drive_link)
+[Addressing Recent Spikes of Severity of Wildfires in Northern California with Data Analysis and Machine Learning](https://drive.google.com/file/d/1Bej-9WUw8XqZiNYK2TyOBcHsQCx1SEgt/view?usp=sharing)
 
 This paper presents a data-driven framework combining spatial risk modeling and fire regime classification to improve wildfire fuel treatment placement and effectiveness.
 
