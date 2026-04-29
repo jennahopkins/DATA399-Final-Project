@@ -4,8 +4,8 @@
 Wildfires in northern California are increasing in severity due to climate change and long-term fuel accumulation. However, current fuel treatment strategies are often not aligned with the environmental conditions that drive high-severity fire.
 
 This project develops a data-driven framework to improve wildfire mitigation by combining:
-1) a spatial risk model to identify where high-severity fire is most likely, and  
-2) a fire regime classification model to determine which treatments are most effective in different environments.
+1) A spatial risk model to identify where high-severity fire is most likely 
+2) A fire regime classification model to determine which treatments are most effective in different environments
 
 Together, these approaches provide a scalable method for improving the efficiency and effectiveness of fuel treatment planning.
 
@@ -25,7 +25,7 @@ Together, these approaches provide a scalable method for improving the efficienc
 
 ![Efficiency of Treatment Placement Across Fires (Actual vs Modeled)](Figures/Fig2_Solution1.png)
 
-*Comparison of treatment placement efficiency in capturing high-severity fire areas under observed and model-based strategies. Bar charts show the proportion of high-severity pixels intersected by actual treatment locations versus optimized, model-based treatment placement for two case studies: McCash (2021) and Park (2024). Across both fires, model-based treatment scenarios capture a substantially greater share of high-severity areas than existing treatments, highlighting the potential gains in effectiveness from strategically prioritizing treatment locations based on fire behavior and landscape conditions.*
+*Figure 2. Comparison of treatment placement efficiency in capturing high-severity fire areas under observed and model-based strategies. Bar charts show the proportion of high-severity pixels intersected by actual treatment locations versus optimized, model-based treatment placement for two case studies: McCash (2021) and Park (2024). Across both fires, model-based treatment scenarios capture a substantially greater share of high-severity areas than existing treatments, highlighting the potential gains in effectiveness from strategically prioritizing treatment locations based on fire behavior and landscape conditions.*
 
 ## Data Sources
 * MTBS (Monitoring Trends in Burn Severity)
@@ -38,9 +38,9 @@ Raw data files are too big to be stored on GitHub, and can be found in this Goog
 ## Repository Structure
 
 - `AnalysisDatasets/` - Datasets used for analysis and modeling, created by the 4 data sources through python files
+- `Figures/` – Output figures used in the white paper 
 - `Python Code (joining source data)/` - Python scripts to join data from our 4 sources to create datasets for analysis and modeling
 - `R Code (analysis)/` – Rmd file to perform data processing, analysis, modeling, and visualization 
-- `Figures/` – Output figures used in the white paper 
 - `White Paper/` – Final white paper document  
 - `README.md` – Project overview and documentation 
 - `.gitignore` - Ignoring large source datasets and Mac files
@@ -53,7 +53,7 @@ This paper presents a data-driven framework combining spatial risk modeling and 
 
 ## Author Contributions
 
-- **Jenna Hopkins** – Joining source data, hypothesis testing, solutions, and recommendations
+- **Jenna Hopkins** – Joining source data, hypothesis testing, supervised modeling, solutions and recommendations
 - **Jerrick Little** – Stakeholder and policy research, EDA, hypothesis testing, problem description and recommendations
 - **AJ Tennathur** – Data processing, EDA, unsupervised learning, executive summary and background
 
