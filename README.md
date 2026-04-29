@@ -1,48 +1,13 @@
 # Addressing Recent Spikes of Severity of Wildfires in Northern California With Data Analysis and Machine Learning
-This project analyzes environmental variables to model and predict wildfire risk, with the goal of informing land management decisions. For DATA399 Environmental Data Science taught by Professor Meunier.
 
-## Authors 
-- Jenna Hopkins - Willamette University, 3 + 1 MS Data Science Program, Data Science & Computer Science Major
-- Jerrick Little - Willamette University, 3 + 1 MS Data Science Program, Data Science Major
-- Anujan Tennathur - Willamette University, Data Science & Computer Science Major
+## Project Overview
+Wildfires in northern California are increasing in severity due to climate change and long-term fuel accumulation. However, current fuel treatment strategies are often not aligned with the environmental conditions that drive high-severity fire.
 
-## Overview
-Repeated large-scale fire suppression without sufficient prevention measures has contributed to the accumulation of fuel understory in high-risk wildfire areas, increasing the severity of future wildfires. This risk is further intensified by anthropogenic climate change, which is driving drier atmospheric conditions and more flammable fuels. Contemporary wildfire detection and prediction has evolved from human observation to systems that use satellite imagery, ground-based sensors, and aerial surveillance. Despite these advancements, federal policy is still lagging behind modern-day research in regards to wildfire prevention and detection. 
+This project develops a data-driven framework to improve wildfire mitigation by combining:
+1) a spatial risk model to identify where high-severity fire is most likely, and  
+2) a fire regime classification model to determine which treatments are most effective in different environments.
 
-Wildfires in northern California are increasing in frequency, severity, and economic impact, with annual losses estimated between $394 and $893 billion, including property damage, health impacts, and suppression costs. Climate models project continued increases in temperature and fuel aridity due to anthropogenic climate change, which will further intensify wildfire activity. In addition, long-term fire suppression has contributed to fuel accumulation, increasing the likelihood of high-severity fire events. As a result, wildfire risk is growing while current mitigation efforts remain inconsistently aligned with environmental conditions that drive fire severity. 
-
-Two solutions are developed to address inefficient fuel treatment placement in northern California. The first is a spatial wildfire severity risk model that uses environmental predictors to identify areas with high likelihood of severe fire, producing interpretable risk surfaces that generalize to new fire events. This improves allocation of limited resources by prioritizing high-risk locations. The second is a fire regime classification framework that identifies distinct ecological and climatic fire environments and links them to appropriate treatment strategies. This improves treatment effectiveness by aligning interventions with local fuel and environmental conditions. Together, these solutions address both where treatments should be placed and how they should be implemented.
-
-It is recommended that land management agencies transition from historically driven treatment strategies to a risk-based framework. This approach combines the predictive spatial model from Solution 1 to identify high-risk areas with the regime-based framework from Solution 2 to guide treatment selection within those areas. This integrated system improves the efficiency and effectiveness of fuel treatments by ensuring that both placement and treatment type are aligned with environmental fire risk.
-
-## Data Sources
-* MTBS (Monitoring Trends in Burn Severity)
-* CAL FIRE (California Department of Forestry and Fire Protection)
-* LANDFIRE (Landscape Fire and Resource Management Planning Tools)
-* PRISM (Parameter-elevation Regressions on Independent Slopes Model)
-
-Raw data files are too big to be stored on GitHub, and can be found in this Google Drive folder: https://drive.google.com/drive/folders/1ywLNy2Vk8i748Z1bfy3FXhVBVB3FLQhz?usp=sharing 
-
-## Methods
-We applied the following techniques:
-
-- Data joining in Python -> combined_dataset.csv
-- Dataset preprocessing in R
-- Normality distribution tests
-    - Shapiro test
-    - Anderson-Darling test
-- Testing for differences in severity across fires
-    - Kruskall-Wallis test
-    - Dunn's test
-- Forming fire group clusters
-    - Hierarchial Cluster Analysis
-    - Elbow Method
-- Unsupervised machine learning
-    - NMDS
-    - UMAP
-    - HBDSCAN
-- Supervised machine learning
-    - Random Forest
+Together, these approaches provide a scalable method for improving the efficiency and effectiveness of fuel treatment planning.
 
 ## Key Findings
 - Wildfire severity is primarily driven by environmental conditions.
@@ -56,8 +21,40 @@ We applied the following techniques:
 - A combined, risk-based framework improves outcomes.
     - Integrating spatial risk (where) with regime-based treatments (how) increases effectiveness without increasing resources.
 
+## Example Result
+
+![Efficiency of Treatment Placement Across Fires (Actual vs Modeled)](Figures/Fig2_Solution1.png)
+
+*Comparison of treatment placement efficiency in capturing high-severity fire areas under observed and model-based strategies. Bar charts show the proportion of high-severity pixels intersected by actual treatment locations versus optimized, model-based treatment placement for two case studies: McCash (2021) and Park (2024). Across both fires, model-based treatment scenarios capture a substantially greater share of high-severity areas than existing treatments, highlighting the potential gains in effectiveness from strategically prioritizing treatment locations based on fire behavior and landscape conditions.*
+
+## Data Sources
+* MTBS (Monitoring Trends in Burn Severity)
+* CAL FIRE (California Department of Forestry and Fire Protection)
+* LANDFIRE (Landscape Fire and Resource Management Planning Tools)
+* PRISM (Parameter-elevation Regressions on Independent Slopes Model)
+
+Raw data files are too big to be stored on GitHub, and can be found in this Google Drive folder: https://drive.google.com/drive/folders/1ywLNy2Vk8i748Z1bfy3FXhVBVB3FLQhz?usp=sharing 
+
+## Repository Structure
+
+- `AnalysisDatasets/` - Datasets used for analysis and modeling, created by the 4 data sources through python files
+- `Python Code (joining source data)/` - Python scripts to join data from our 4 sources to create datasets for analysis and modeling
+- `R Code (analysis)/` – Rmd file to perform data processing, analysis, modeling, and visualization 
+- `Figures/` – Output figures used in the white paper 
+- `White Paper/` – Final white paper document  
+- `README.md` – Project overview and documentation 
+- `.gitignore` - Ignoring large source datasets and Mac files
+
 ## White Paper
 Read the full report here:  
 [Addressing Recent Spikes of Severity of Wildfires in Northern California with Data Analysis and Machine Learning](https://drive.google.com/file/d/1yda1wmDHoDYFRi5STZioqhLbWhNmdYv6/view?usp=drive_link)
 
 This paper presents a data-driven framework combining spatial risk modeling and fire regime classification to improve wildfire fuel treatment placement and effectiveness.
+
+## Author Contributions
+
+- **Jenna Hopkins** – Joining source data, hypothesis testing, solutions, and recommendations
+- **Jerrick Little** – Stakeholder and policy research, EDA, hypothesis testing, problem description and recommendations
+- **AJ Tennathur** – Data processing, EDA, unsupervised learning, executive summary and background
+
+All authors contributed in some way to subject research, data gathering, analysis, and modeling, and writing the white paper.
