@@ -45,5 +45,19 @@ We applied the following techniques:
     - Random Forest
 
 ## Key Findings
+- Wildfire severity is primarily driven by environmental conditions.
+    - Fuel structure, vegetation type, and atmospheric dryness (VPD) strongly influence whether fires become high-severity.
+- Current fuel treatment placement is inefficient.
+    - Existing treatments are often misaligned with areas most likely to experience high-severity fire.
+- A machine learning risk model improves targeting.
+    - A Random Forest model identifies high-risk areas and captures a greater share of high-severity fire under the same treatment budget.
+- Wildfire behavior clusters into distinct fire regimes.
+    - Eleven regimes emerge from pre-fire environmental conditions, each requiring different management strategies.
+- A combined, risk-based framework improves outcomes.
+    - Integrating spatial risk (where) with regime-based treatments (how) increases effectiveness without increasing resources.
 
 ## White Paper
+Read the full report here:  
+[Addressing Recent Spikes of Severity of Wildfires in Northern California with Data Analysis and Machine Learning](https://drive.google.com/file/d/1yda1wmDHoDYFRi5STZioqhLbWhNmdYv6/view?usp=drive_link)
+
+This paper presents a data-driven framework combining spatial risk modeling and fire regime classification to improve wildfire fuel treatment placement and effectiveness.
