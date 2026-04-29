@@ -23,9 +23,9 @@ Together, these approaches provide a scalable method for improving the efficienc
 
 ## Example Result
 
-![Efficiency of Treatment Placement Across Fires (Actual vs Modeled)](Figures/Fig2_Solution1.png)
+![Efficiency of Treatment Placement Across Fires](Figures/Fig2_Solution1.png)
 
-*Figure 2. Comparison of treatment placement efficiency in capturing high-severity fire areas under observed and model-based strategies. Bar charts show the proportion of high-severity pixels intersected by actual treatment locations versus optimized, model-based treatment placement for two case studies: McCash (2021) and Park (2024). Across both fires, model-based treatment scenarios capture a substantially greater share of high-severity areas than existing treatments, highlighting the potential gains in effectiveness from strategically prioritizing treatment locations based on fire behavior and landscape conditions.*
+Figure 2. Comparison of treatment placement efficiency in capturing high-severity fire areas under observed and model-based strategies. Bar charts show the proportion of high-severity pixels intersected by actual treatment locations versus optimized, model-based treatment placement for two case studies: McCash (2021) and Park (2024). Across both fires, model-based treatment scenarios capture a substantially greater share of high-severity areas than existing treatments, highlighting the potential gains in effectiveness from strategically prioritizing treatment locations based on fire behavior and landscape conditions.
 
 ## Data Sources
 * MTBS (Monitoring Trends in Burn Severity)
@@ -33,7 +33,7 @@ Together, these approaches provide a scalable method for improving the efficienc
 * LANDFIRE (Landscape Fire and Resource Management Planning Tools)
 * PRISM (Parameter-elevation Regressions on Independent Slopes Model)
 
-Raw data files are too big to be stored on GitHub, and can be found in this Google Drive folder: https://drive.google.com/drive/folders/1ywLNy2Vk8i748Z1bfy3FXhVBVB3FLQhz?usp=sharing 
+Raw data files are too big to be stored on GitHub, and can be found in [this Google Drive folder](https://drive.google.com/drive/folders/1ywLNy2Vk8i748Z1bfy3FXhVBVB3FLQhz?usp=sharing).
 
 ## Repository Structure
 
