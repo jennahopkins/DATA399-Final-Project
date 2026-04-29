@@ -6,3 +6,5 @@ SourceDatasets/
 *.asc
 *.nc
 *.zip
+
+.DS_Store
